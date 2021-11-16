@@ -166,9 +166,9 @@ func (c *Celeritas) New(rootPath string) error {
 
 	c.Server = Server{
 		ServerName: os.Getenv("SERVER_NAME"),
-		Port: os.Getenv("PORT"),
-		Secure: secure,
-		URL: os.Getenv("APP_URL"),
+		Port:       os.Getenv("PORT"),
+		Secure:     secure,
+		URL:        os.Getenv("APP_URL"),
 	}
 
 	// create session
@@ -360,6 +360,15 @@ func (c *Celeritas) BuildDSN() string {
 		if os.Getenv("DATABASE_PASS") != "" {
 			dsn = fmt.Sprintf("%s password=%s", dsn, os.Getenv("DATABASE_PASS"))
 		}
+
+	case "mysql", "mariadb":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?collation=utf8_unicode_ci&timeout=5s&parseTime=true&tls=%s&readTimeout=5s",
+			os.Getenv("DATABASE_USER"),
+			os.Getenv("DATABASE_PASS"),
+			os.Getenv("DATABASE_HOST"),
+			os.Getenv("DATABASE_PORT"),
+			os.Getenv("DATABASE_NAME"),
+			os.Getenv("DATABASE_SSL_MODE"))
 
 	default:
 
