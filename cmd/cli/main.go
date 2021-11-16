@@ -27,7 +27,7 @@ func main() {
 
 	case "new":
 		if arg2 == "" {
-			exitGracefully(errors.New("new requires an applicaiton name"))
+			exitGracefully(errors.New("new requires an application name"))
 		}
 		doNew(arg2)
 
