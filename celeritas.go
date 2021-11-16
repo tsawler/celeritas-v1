@@ -355,7 +355,7 @@ func (c *Celeritas) BuildDSN() string {
 			os.Getenv("DATABASE_NAME"),
 			os.Getenv("DATABASE_SSL_MODE"))
 
-		// we check to see if a database passsword has been supplied, since including "password=" with nothing
+		// we check to see if a database password has been supplied, since including "password=" with nothing
 		// after it sometimes causes postgres to fail to allow a connection.
 		if os.Getenv("DATABASE_PASS") != "" {
 			dsn = fmt.Sprintf("%s password=%s", dsn, os.Getenv("DATABASE_PASS"))
