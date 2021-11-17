@@ -2,8 +2,14 @@ package celeritas
 
 import (
 	"fmt"
+	"github.com/tsawler/celeritas/filesystems/miniofilesystem"
+	"github.com/tsawler/celeritas/filesystems/s3filesystem"
+	"github.com/tsawler/celeritas/filesystems/sftpfilesystem"
+	"github.com/tsawler/celeritas/filesystems/webdavfilesystem"
 	"log"
+	"net"
 	"net/http"
+	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
@@ -28,27 +34,30 @@ var myRedisCache *cache.RedisCache
 var myBadgerCache *cache.BadgerCache
 var redisPool *redis.Pool
 var badgerConn *badger.DB
+var maintenanceMode bool
 
 // Celeritas is the overall type for the Celeritas package. Members that are exported in this type
 // are available to any application that uses it.
 type Celeritas struct {
-	AppName       string
-	Debug         bool
-	Version       string
-	ErrorLog      *log.Logger
-	InfoLog       *log.Logger
-	RootPath      string
-	Routes        *chi.Mux
-	Render        *render.Render
-	Session       *scs.SessionManager
-	DB            Database
-	JetViews      *jet.Set
-	config        config
-	EncryptionKey string
-	Cache         cache.Cache
-	Scheduler     *cron.Cron
-	Mail          mailer.Mail
-	Server        Server
+	AppName         string
+	Debug           bool
+	Version         string
+	ErrorLog        *log.Logger
+	InfoLog         *log.Logger
+	RootPath        string
+	Routes          *chi.Mux
+	Render          *render.Render
+	Session         *scs.SessionManager
+	DB              Database
+	JetViews        *jet.Set
+	config          config
+	EncryptionKey   string
+	Cache           cache.Cache
+	Scheduler       *cron.Cron
+	Mail            mailer.Mail
+	Server          Server
+	MaintenanceMode bool
+	FileSystems     map[string]interface{}
 }
 
 type Server struct {
@@ -59,12 +68,31 @@ type Server struct {
 }
 
 type config struct {
-	port        string
-	renderer    string
-	cookie      cookieConfig
-	sessionType string
-	database    databaseConfig
-	redis       redisConfig
+	port          string
+	renderer      string
+	cookie        cookieConfig
+	sessionType   string
+	database      databaseConfig
+	redis         redisConfig
+	rpcPort       string
+	s3Secret      string
+	s3Key         string
+	s3Bucket      string
+	s3Region      string
+	s3Endpoint    string
+	minioKey      string
+	minioSecret   string
+	minioEndpoint string
+	minioRegion   string
+	minioUseSSL   bool
+	minioBucket   string
+	sftpHost      string
+	sftpUser      string
+	sftpPass      string
+	sftpPort      string
+	webDavHost    string
+	webDavUser    string
+	webDavPass    string
 }
 
 // New reads the .env file, creates our application config, populates the Celeritas type with settings
@@ -136,10 +164,30 @@ func (c *Celeritas) New(rootPath string) error {
 	c.RootPath = rootPath
 	c.Mail = c.createMailer()
 	c.Routes = c.routes().(*chi.Mux)
+	c.MaintenanceMode = false
 
 	c.config = config{
-		port:     os.Getenv("PORT"),
-		renderer: os.Getenv("RENDERER"),
+		port:          os.Getenv("PORT"),
+		rpcPort:       os.Getenv("RPC_PORT"),
+		renderer:      os.Getenv("RENDERER"),
+		s3Secret:      os.Getenv("S3_SECRET"),
+		s3Key:         os.Getenv("S3_KEY"),
+		s3Bucket:      os.Getenv("S3_BUCKET"),
+		s3Region:      os.Getenv("S3_REGION"),
+		s3Endpoint:    os.Getenv("S3_ENDPOINT"),
+		minioKey:      os.Getenv("MINIO_KEY"),
+		minioSecret:   os.Getenv("MINIO_SECRET"),
+		minioEndpoint: os.Getenv("MINIO_ENDPOINT"),
+		minioRegion:   os.Getenv("MINIO_REGION"),
+		minioBucket:   os.Getenv("MINIO_BUCKET"),
+		minioUseSSL:   false,
+		sftpHost:      os.Getenv("SFTP_HOST"),
+		sftpUser:      os.Getenv("SFTP_USER"),
+		sftpPass:      os.Getenv("SFTP_PASS"),
+		sftpPort:      os.Getenv("SFTP_PORT"),
+		webDavHost:    os.Getenv("WEBDAV_HOST"),
+		webDavUser:    os.Getenv("WEBDAV_USER"),
+		webDavPass:    os.Getenv("WEBDAV_PASS"),
 		cookie: cookieConfig{
 			name:     os.Getenv("COOKIE_NAME"),
 			lifetime: os.Getenv("COOKIE_LIFETIME"),
@@ -172,7 +220,6 @@ func (c *Celeritas) New(rootPath string) error {
 	}
 
 	// create session
-
 	sess := session.Session{
 		CookieLifetime: c.config.cookie.lifetime,
 		CookiePersist:  c.config.cookie.persist,
@@ -205,9 +252,57 @@ func (c *Celeritas) New(rootPath string) error {
 	}
 
 	c.createRenderer()
+	c.FileSystems = c.createFileSystems()
+
 	go c.Mail.ListenForMail()
 
 	return nil
+}
+
+func (c *Celeritas) createFileSystems() map[string]interface{} {
+	fileSystems := make(map[string]interface{})
+	if c.config.s3Key != "" && c.config.s3Secret != "" && c.config.s3Bucket != "" {
+		s3 := s3filesystem.S3{
+			Key:      c.config.s3Key,
+			Secret:   c.config.s3Secret,
+			Region:   c.config.s3Region,
+			Endpoint: c.config.s3Endpoint,
+			Bucket:   c.config.s3Bucket,
+		}
+		fileSystems["S3"] = s3
+	}
+
+	if c.config.minioKey != "" {
+		minio := miniofilesystem.Minio{
+			Endpoint: c.config.minioEndpoint,
+			Key:      c.config.minioKey,
+			Secret:   c.config.minioSecret,
+			UseSSL:   false,
+			Region:   c.config.minioRegion,
+			Bucket:   c.config.minioBucket,
+		}
+		fileSystems["MINIO"] = minio
+	}
+
+	if c.config.sftpHost != "" {
+		sftp := sftpfilesystem.SFTP{
+			Host: c.config.sftpHost,
+			User: c.config.sftpUser,
+			Pass: c.config.sftpPass,
+			Port: c.config.sftpPort,
+		}
+		fileSystems["SFTP"] = sftp
+	}
+
+	if c.config.webDavHost != "" {
+		webDav := webdavfilesystem.WebDAV{
+			Host: c.config.webDavHost,
+			User: c.config.webDavUser,
+			Pass: c.config.webDavPass,
+		}
+		fileSystems["WEBDAV"] = webDav
+	}
+	return fileSystems
 }
 
 // Init creates necessary folders for our Celeritas application
@@ -246,6 +341,7 @@ func (c *Celeritas) ListenAndServe() {
 		defer badgerConn.Close()
 	}
 
+	go c.listenRPC()
 	c.InfoLog.Printf("Listening on port %s", os.Getenv("PORT"))
 	err := srv.ListenAndServe()
 	c.ErrorLog.Fatal(err)
@@ -375,4 +471,44 @@ func (c *Celeritas) BuildDSN() string {
 	}
 
 	return dsn
+}
+
+type RPCServer struct{}
+
+// MaintenanceMode is called over rpc, and sets the package level variable maintenanceMode
+// to true (server is in maintenance mode) or false (server is live). The maintenanceMode
+// variable is used by the CheckForMaintenanceMode middleware.
+func (r *RPCServer) MaintenanceMode(inMaintenanceMode bool, resp *string) error {
+	if inMaintenanceMode {
+		maintenanceMode = true
+		*resp = "Server in maintenance mode!"
+	} else {
+		maintenanceMode = false
+		*resp = "Server live!"
+	}
+	return nil
+}
+
+// listenRPC starts the rpc listener on the port specified in the .env file.
+func (c *Celeritas) listenRPC() {
+	// if nothing specified for rpc port, don't start
+	if c.config.rpcPort != "" {
+		c.InfoLog.Printf("Starting RPC Server on port %s...", c.config.rpcPort)
+		err := rpc.Register(new(RPCServer))
+		if err != nil {
+			return
+		}
+		listen, err := net.Listen("tcp", "127.0.0.1:"+c.config.rpcPort)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for {
+			rpcConn, err := listen.Accept()
+			if err != nil {
+				continue
+			}
+			go rpc.ServeConn(rpcConn)
+		}
+	}
 }

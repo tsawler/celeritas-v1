@@ -1,8 +1,10 @@
 package celeritas
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/justinas/nosurf"
 )
@@ -19,11 +21,29 @@ func (c *Celeritas) NoSurf(next http.Handler) http.Handler {
 
 	csrfHandler.SetBaseCookie(http.Cookie{
 		HttpOnly: true,
-		Path: "/",
-		Secure: secure,
+		Path:     "/",
+		Secure:   secure,
 		SameSite: http.SameSiteStrictMode,
-		Domain: c.config.cookie.domain,
+		Domain:   c.config.cookie.domain,
 	})
 
 	return csrfHandler
+}
+
+// CheckForMaintenanceMode checks for maintenance mode status.
+// If maintenanceMode is true, we return http status 503 and display
+// a message indicating that the server is under maintenance
+func (c *Celeritas) CheckForMaintenanceMode(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if maintenanceMode {
+			if !strings.Contains(r.URL.Path, "/public/maintenance.html") && !strings.Contains(r.URL.Path, "/public/images/") {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Header().Set("Retry-After:", "300")
+				w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")
+				http.ServeFile(w, r, fmt.Sprintf("%s/public/maintenance.html", c.RootPath))
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

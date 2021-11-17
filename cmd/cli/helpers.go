@@ -60,6 +60,8 @@ func getDSN() string {
 func showHelp() {
 	color.Yellow(`Available commands:
 
+	down                  - put the server into maintenance mode
+    up                    - take the server out of maintenance mode
 	help                  - show the help commands
 	version               - print application version
 	migrate               - runs all up migrations that have not been run previously

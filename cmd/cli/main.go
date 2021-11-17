@@ -22,6 +22,16 @@ func main() {
 	setup(arg1, arg2)
 
 	switch arg1 {
+
+	case "up":
+		//_ = os.Remove(cel.RootPath + "/tmp/maintenance")
+		client(false)
+
+	case "down":
+		//maintenance, _ := os.Create(cel.RootPath + "/tmp/maintenance")
+		//defer maintenance.Close()
+		client(true)
+
 	case "help":
 		showHelp()
 
