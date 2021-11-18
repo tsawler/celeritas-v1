@@ -45,19 +45,19 @@ func checkForDB() {
 func showHelp() {
 	color.Yellow(`Available commands:
 
-	down                  - put the server into maintenance mode
-    up                    - take the server out of maintenance mode
-	help                  - show the help commands
-	version               - print application version
-	migrate               - runs all up migrations that have not been run previously
-	migrate down          - reverses the most recent migration
-	migrate reset         - runs all down migrations in reverse order, and then all up migrations
-	make migration <name> - creates two new up and down migrations in the migrations folder
-	make auth             - creates and runs migrations for authentication tables, and creates models and middleware
-	make handler <name>   - creates a stub handler in the handlers directory
-	make model <name>     - creates a new model in the data directory
-	make session          - creates a table in the database as a session store
-	make mail <name>      - creates two starter mail templates in the mail directory
+	down                           - put the server into maintenance mode 
+	up                             - take the server out of maintenance mode
+	help                           - show the help commands
+	version                        - print application version
+	migrate                        - runs all up migrations that have not been run previously
+	migrate down                   - reverse the most recent migration
+	migrate reset                  - runs all down migrations in reverse order, and then all up migrations
+	make migration <name> <format> - create two new up and down migrations in the migrations folder; format = sql/fizz (default fizz)
+	make auth                      - create and run migrations for authentication tables, and creates models and middleware
+	make handler <name>            - create a stub handler in the handlers directory
+	make model <name>              - create a new model in the data directory
+	make session                   - create a table in the database as a session store
+	make mail <name>               - create two starter mail templates in the mail directory
 	
 	`)
 }

@@ -22,8 +22,6 @@ func doMake(arg2, arg3, arg4 string) error {
 		migrationType := "fizz"
 		var up, down string
 
-		color.Yellow("Arg4 %s", arg4)
-
 		if arg4 == "fizz" || arg4 == "" {
 			upBytes, _ := templateFS.ReadFile("templates/migrations/migration_up.fizz")
 			downBytes, _ := templateFS.ReadFile("templates/migrations/migration_down.fizz")

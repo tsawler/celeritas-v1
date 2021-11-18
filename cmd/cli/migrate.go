@@ -1,14 +1,18 @@
 package main
 
-import "github.com/fatih/color"
+import "github.com/gobuffalo/pop"
 
 func doMigrate(arg2, arg3 string) error {
-	color.Yellow("Running doMigrate")
+	tx, err := pop.Connect("development")
+	if err != nil {
+		exitGracefully(err)
+	}
+	defer tx.Close()
 
 	// run the migration command
 	switch arg2 {
 	case "up":
-		err := cel.RunPopMigrations()
+		err := cel.RunPopMigrations(tx)
 		if err != nil {
 			exitGracefully(err)
 			return err
@@ -16,19 +20,19 @@ func doMigrate(arg2, arg3 string) error {
 
 	case "down":
 		if arg3 == "all" {
-			err := cel.PopMigrateDown(-1)
+			err := cel.PopMigrateDown(tx, -1)
 			if err != nil {
 				return err
 			}
 		} else {
-			err := cel.PopMigrateDown(1)
+			err := cel.PopMigrateDown(tx, 1)
 			if err != nil {
 				return err
 			}
 		}
 
 	case "reset":
-		err := cel.PopMigrateReset()
+		err := cel.PopMigrateReset(tx)
 		if err != nil {
 			return err
 		}
