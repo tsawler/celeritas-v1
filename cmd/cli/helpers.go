@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,34 +27,19 @@ func setup(arg1, arg2 string) {
 	}
 }
 
-func getDSN() string {
+func checkForDB() {
 	dbType := cel.DB.DataType
-
 	if dbType == "pgx" {
 		dbType = "postgres"
 	}
 
-	if dbType == "postgres" {
-		var dsn string
-		if os.Getenv("DATABASE_PASS") != "" {
-			dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-				os.Getenv("DATABASE_USER"),
-				os.Getenv("DATABASE_PASS"),
-				os.Getenv("DATABASE_HOST"),
-				os.Getenv("DATABASE_PORT"),
-				os.Getenv("DATABASE_NAME"),
-				os.Getenv("DATABASE_SSL_MODE"))
-		} else {
-			dsn = fmt.Sprintf("postgres://%s@%s:%s/%s?sslmode=%s",
-				os.Getenv("DATABASE_USER"),
-				os.Getenv("DATABASE_HOST"),
-				os.Getenv("DATABASE_PORT"),
-				os.Getenv("DATABASE_NAME"),
-				os.Getenv("DATABASE_SSL_MODE"))
-		}
-		return dsn
+	if dbType == "" {
+		exitGracefully(errors.New("no database connection provided in .env"))
 	}
-	return "mysql://" + cel.BuildDSN()
+
+	if !fileExists(cel.RootPath + "/config/database.yml") {
+		exitGracefully(errors.New("config/database.yml not found"))
+	}
 }
 
 func showHelp() {
