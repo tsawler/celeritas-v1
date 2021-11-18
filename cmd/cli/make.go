@@ -38,8 +38,6 @@ sql("alter table some_table alter column updated_at set default now();")`
 			migrationType = "sql"
 		}
 
-		color.Yellow("Migration type: %s", migrationType)
-
 		err := cel.CreatePopMigration([]byte(up), []byte(down), arg3, migrationType)
 		if err != nil {
 			exitGracefully(err)
