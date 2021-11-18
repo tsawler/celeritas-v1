@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
-	"github.com/fatih/color"
 )
 
 func doMake(arg2, arg3 string) error {
@@ -19,9 +19,18 @@ func doMake(arg2, arg3 string) error {
 		rnd := cel.RandomString(32)
 		color.Yellow("32 character encryption key: %s", rnd)
 
+	case "popmigration":
+		up, _ := templateFS.ReadFile("templates/migrations/migration_up.fizz")
+		down, _ := templateFS.ReadFile("templates/migrations/migration_down.fizz")
+
+		err := cel.CreatePopMigration(up, down, arg3, "fizz")
+		if err != nil {
+			exitGracefully(err)
+		}
+
 	case "migration":
 		dbType := cel.DB.DataType
-		if arg3 == ""{
+		if arg3 == "" {
 			exitGracefully(errors.New("you must give the migration a name"))
 		}
 
@@ -90,7 +99,7 @@ func doMake(arg2, arg3 string) error {
 			modelName = plur.Singular(arg3)
 			tableName = strings.ToLower(tableName)
 		} else {
-			tableName= strings.ToLower(plur.Plural(arg3))
+			tableName = strings.ToLower(plur.Plural(arg3))
 		}
 
 		fileName := cel.RootPath + "/data/" + strings.ToLower(modelName) + ".go"

@@ -25,7 +25,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgconn v1.10.0
 	github.com/jackc/pgx/v4 v4.13.0
-	github.com/joho/godotenv v1.3.0
+	github.com/joho/godotenv v1.4.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/minio/minio-go/v7 v7.0.15
 	github.com/ory/dockertest/v3 v3.8.0
@@ -39,6 +39,7 @@ require (
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
+	github.com/Masterminds/semver/v3 v3.1.1 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7 // indirect
@@ -50,6 +51,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cockroachdb/cockroach-go v0.0.0-20190925194419-606b3d062051 // indirect
 	github.com/containerd/continuity v0.2.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/docker/cli v20.10.8+incompatible // indirect
@@ -57,9 +59,25 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.3.1 // indirect
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
+	github.com/gobuffalo/envy v1.10.1 // indirect
+	github.com/gobuffalo/fizz v1.13.0 // indirect
+	github.com/gobuffalo/flect v0.2.4 // indirect
+	github.com/gobuffalo/genny v0.6.0 // indirect
+	github.com/gobuffalo/github_flavored_markdown v1.1.0 // indirect
+	github.com/gobuffalo/helpers v0.6.1 // indirect
+	github.com/gobuffalo/logger v1.0.3 // indirect
+	github.com/gobuffalo/nulls v0.4.1 // indirect
+	github.com/gobuffalo/packd v1.0.1 // indirect
+	github.com/gobuffalo/plush/v4 v4.0.0 // indirect
+	github.com/gobuffalo/pop v4.13.1+incompatible // indirect
+	github.com/gobuffalo/tags/v3 v3.1.0 // indirect
+	github.com/gobuffalo/validate v2.0.4+incompatible // indirect
+	github.com/gobuffalo/validate/v3 v3.1.0 // indirect
+	github.com/gofrs/uuid v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
@@ -81,7 +99,9 @@ require (
 	github.com/jackc/pgtype v1.8.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/jmoiron/sqlx v1.3.4 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351 // indirect
 	github.com/klauspost/compress v1.13.5 // indirect
 	github.com/klauspost/cpuid v1.3.1 // indirect
@@ -90,6 +110,8 @@ require (
 	github.com/mailgun/mailgun-go/v4 v4.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-sqlite3 v2.0.3+incompatible // indirect
+	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/minio/md5-simd v1.1.0 // indirect
 	github.com/minio/sha256-simd v0.1.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -101,11 +123,14 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rogpeppe/go-internal v1.8.0 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/sendgrid/rest v2.6.5+incompatible // indirect
 	github.com/sendgrid/sendgrid-go v3.10.1+incompatible // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sourcegraph/annotate v0.0.0-20160123013949-f4cad6c6324d // indirect
+	github.com/sourcegraph/syntaxhighlight v0.0.0-20170531221838-bd320f5d308e // indirect
 	github.com/studio-b12/gowebdav v0.0.0-20211109083228-3f8721cd4b6f // indirect
 	github.com/vanng822/css v1.0.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.0 // indirect
@@ -115,7 +140,9 @@ require (
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da // indirect
 	go.opencensus.io v0.22.5 // indirect
 	golang.org/x/net v0.0.0-20210928044308-7d9f5e0b762b // indirect
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
