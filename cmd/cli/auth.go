@@ -8,6 +8,7 @@ import (
 func doAuth() error {
 	checkForDB()
 
+	// get a connection for pop
 	tx, err := pop.Connect("development")
 	if err != nil {
 		exitGracefully(err)
@@ -20,7 +21,7 @@ func doAuth() error {
 	if err != nil {
 		exitGracefully(err)
 	}
-	downBytes := []byte("drop table if exists users cascade; drop table if exists tokens cascade; drop table if exists remember_tokens;")
+	downBytes := []byte("drop table if exists users cascade;\ndrop table if exists tokens cascade;\ndrop table if exists remember_tokens;\n")
 
 	err = cel.CreatePopMigration(upBytes, downBytes, "auth", "sql")
 	if err != nil {
