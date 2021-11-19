@@ -4,8 +4,13 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/github"
 	"myapp/data"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/CloudyKit/jet/v6"
@@ -258,4 +263,70 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 	// redirect
 	h.App.Session.Put(r.Context(), "flash", "Password reset. You can now log in.")
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
+}
+
+func (h *Handlers) InitSocialAuth() {
+	githubKey := "Iv1.7dba98ae39289016"
+	githubSecret := "1d6a0edd694e37177adf78450a98c55c88f1811c"
+
+	scope := []string{"user"}
+
+	provider := github.New(
+		githubKey,
+		githubSecret,
+		"http://localhost:4000/auth/github/callback",
+		scope...,
+	)
+
+	var providers []goth.Provider
+	providers = append(providers, provider)
+
+	goth.UseProviders(providers...)
+
+	key := os.Getenv("KEY")
+	maxAge := 86400 * 30
+	store := sessions.NewCookieStore([]byte(key))
+	store.MaxAge(maxAge)
+	store.Options.Path = "/"
+	store.Options.HttpOnly = true
+	store.Options.Secure = true
+
+	gothic.Store = store
+}
+
+func (h *Handlers) GithubLogin(w http.ResponseWriter, r *http.Request) {
+	h.InitSocialAuth()
+	if _, err := gothic.CompleteUserAuth(w, r); err == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+	} else {
+		gothic.BeginAuthHandler(w, r)
+	}
+}
+
+func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
+	h.InitSocialAuth()
+	gUser, err := gothic.CompleteUserAuth(w, r)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
+	h.App.InfoLog.Println("User", gUser.Email)
+	//w.Write([]byte(gUser.Email))
+	h.App.Session.Put(r.Context(), "userID", 1)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
+	h.InitSocialAuth()
+	h.App.Session.RenewToken(r.Context())
+	h.App.Session.Remove(r.Context(), "userID")
+	h.App.Session.Remove(r.Context(), "remember_token")
+	h.App.Session.Destroy(r.Context())
+	h.App.Session.RenewToken(r.Context())
+
+	err := gothic.Logout(w, r)
+	if err != nil {
+		h.App.ErrorLog.Println(err)
+	}
+	http.Redirect(w, r, "/users/login", http.StatusTemporaryRedirect)
 }
