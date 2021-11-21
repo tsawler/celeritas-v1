@@ -328,17 +328,31 @@ func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO -- look  up user by email address
+	log.Println("Email is", gUser.Email)
+
+	// look  up user by email address
 	var u data.User
-	testUser, err := u.GetByEmail(gUser.Email)
+	var testUser *data.User
+	testUser, err = u.GetByEmail(gUser.Email)
 	if err != nil {
 		// we don't have a user; add one
-	} else {
-		// we have the user; log the user in
-		log.Println(testUser.Email)
+		var newUser data.User
+		newUser.Email = gUser.Email
+		newUser.FirstName = gUser.FirstName
+		newUser.LastName = gUser.LastName
+		newUser.Active = 1
+		newUser.Password = h.randomString(20)
+		newUser.CreatedAt = time.Now()
+		newUser.UpdatedAt = time.Now()
+		_, err := newUser.Insert(newUser)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		testUser, _ = u.GetByEmail(gUser.Email)
 	}
 
-	h.App.Session.Put(r.Context(), "userID", 1)
+	h.App.Session.Put(r.Context(), "userID", testUser.ID)
 	h.App.Session.Put(r.Context(), "social_token", gUser.AccessToken)
 	h.App.Session.Put(r.Context(), "social_email", gUser.Email)
 
