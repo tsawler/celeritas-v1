@@ -144,7 +144,7 @@ func (h *Handlers) Forgot(w http.ResponseWriter, r *http.Request) {
 }
 
 // PostForgot looks up a user by email, and if the user is found, generates
-// an email with a singed link to the reset password form
+// an email with a signed link to the reset password form
 func (h *Handlers) PostForgot(w http.ResponseWriter, r *http.Request) {
 	// parse form
 	err := r.ParseForm()
@@ -274,7 +274,7 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 // InitSocialAuth sets up our package for the providers
-// we want to  implement
+// we want to  implement. In our case, we'll use GitHub and Google
 func (h *Handlers) InitSocialAuth() {
 	scope := []string{"user"}
 	gScope := []string{"email", "profile"}
@@ -283,10 +283,6 @@ func (h *Handlers) InitSocialAuth() {
 		github.New(os.Getenv("GITHUB_KEY"), os.Getenv("GITHUB_SECRET"), "http://localhost:4000/auth/github/callback", scope...),
 		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback", gScope...),
 	)
-
-	var providers []goth.Provider
-
-	goth.UseProviders(providers...)
 
 	key := os.Getenv("KEY")
 	maxAge := 86400 * 30
