@@ -105,7 +105,7 @@ func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) 
 
 	// call the appropriate api for our provider and revoke
 	// the auth token. Each provider has different logic for doing this
-	// (it it exists at all)
+	// (if it exists at all)
 	switch provider {
 	case "github":
 		// call remote api and revoke token
