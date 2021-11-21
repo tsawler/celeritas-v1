@@ -68,31 +68,13 @@ type Server struct {
 }
 
 type config struct {
-	port          string
-	renderer      string
-	cookie        cookieConfig
-	sessionType   string
-	database      databaseConfig
-	redis         redisConfig
-	rpcPort       string
-	s3Secret      string
-	s3Key         string
-	s3Bucket      string
-	s3Region      string
-	s3Endpoint    string
-	minioKey      string
-	minioSecret   string
-	minioEndpoint string
-	minioRegion   string
-	minioUseSSL   bool
-	minioBucket   string
-	sftpHost      string
-	sftpUser      string
-	sftpPass      string
-	sftpPort      string
-	webDavHost    string
-	webDavUser    string
-	webDavPass    string
+	port        string
+	renderer    string
+	cookie      cookieConfig
+	sessionType string
+	database    databaseConfig
+	redis       redisConfig
+	rpcPort     string
 }
 
 // New reads the .env file, creates our application config, populates the Celeritas type with settings
@@ -167,27 +149,9 @@ func (c *Celeritas) New(rootPath string) error {
 	c.MaintenanceMode = false
 
 	c.config = config{
-		port:          os.Getenv("PORT"),
-		rpcPort:       os.Getenv("RPC_PORT"),
-		renderer:      os.Getenv("RENDERER"),
-		s3Secret:      os.Getenv("S3_SECRET"),
-		s3Key:         os.Getenv("S3_KEY"),
-		s3Bucket:      os.Getenv("S3_BUCKET"),
-		s3Region:      os.Getenv("S3_REGION"),
-		s3Endpoint:    os.Getenv("S3_ENDPOINT"),
-		minioKey:      os.Getenv("MINIO_KEY"),
-		minioSecret:   os.Getenv("MINIO_SECRET"),
-		minioEndpoint: os.Getenv("MINIO_ENDPOINT"),
-		minioRegion:   os.Getenv("MINIO_REGION"),
-		minioBucket:   os.Getenv("MINIO_BUCKET"),
-		minioUseSSL:   false,
-		sftpHost:      os.Getenv("SFTP_HOST"),
-		sftpUser:      os.Getenv("SFTP_USER"),
-		sftpPass:      os.Getenv("SFTP_PASS"),
-		sftpPort:      os.Getenv("SFTP_PORT"),
-		webDavHost:    os.Getenv("WEBDAV_HOST"),
-		webDavUser:    os.Getenv("WEBDAV_USER"),
-		webDavPass:    os.Getenv("WEBDAV_PASS"),
+		port:     os.Getenv("PORT"),
+		rpcPort:  os.Getenv("RPC_PORT"),
+		renderer: os.Getenv("RENDERER"),
 		cookie: cookieConfig{
 			name:     os.Getenv("COOKIE_NAME"),
 			lifetime: os.Getenv("COOKIE_LIFETIME"),
@@ -261,44 +225,48 @@ func (c *Celeritas) New(rootPath string) error {
 
 func (c *Celeritas) createFileSystems() map[string]interface{} {
 	fileSystems := make(map[string]interface{})
-	if c.config.s3Key != "" && c.config.s3Secret != "" && c.config.s3Bucket != "" {
+	if os.Getenv("S3_KEY") != "" {
 		s3 := s3filesystem.S3{
-			Key:      c.config.s3Key,
-			Secret:   c.config.s3Secret,
-			Region:   c.config.s3Region,
-			Endpoint: c.config.s3Endpoint,
-			Bucket:   c.config.s3Bucket,
+			Key:      os.Getenv("S3_KEY"),
+			Secret:   os.Getenv("S3_SECRET"),
+			Region:   os.Getenv("S3_REGION"),
+			Endpoint: os.Getenv("S3_ENDPOINT"),
+			Bucket:   os.Getenv("S3_BUCKET"),
 		}
 		fileSystems["S3"] = s3
 	}
 
-	if c.config.minioKey != "" {
+	if os.Getenv("MINIO_SECRET") != "" {
+		useSSL := false
+		if strings.ToLower(os.Getenv("MINIO_USESSL")) == "true" {
+			useSSL = true
+		}
 		minio := miniofilesystem.Minio{
-			Endpoint: c.config.minioEndpoint,
-			Key:      c.config.minioKey,
-			Secret:   c.config.minioSecret,
-			UseSSL:   false,
-			Region:   c.config.minioRegion,
-			Bucket:   c.config.minioBucket,
+			Endpoint: os.Getenv("MINIO_ENDPOINT"),
+			Key:      os.Getenv("MINIO_KEY"),
+			Secret:   os.Getenv("MINIO_SECRET"),
+			UseSSL:   useSSL,
+			Region:   os.Getenv("MINIO_REGION"),
+			Bucket:   os.Getenv("MINIO_BUCKET"),
 		}
 		fileSystems["MINIO"] = minio
 	}
 
-	if c.config.sftpHost != "" {
+	if os.Getenv("SFTP_HOST") != "" {
 		sftp := sftpfilesystem.SFTP{
-			Host: c.config.sftpHost,
-			User: c.config.sftpUser,
-			Pass: c.config.sftpPass,
-			Port: c.config.sftpPort,
+			Host: os.Getenv("SFTP_HOST"),
+			User: os.Getenv("SFTP_USER"),
+			Pass: os.Getenv("SFTP_PASS"),
+			Port: os.Getenv("SFTP_PORT"),
 		}
 		fileSystems["SFTP"] = sftp
 	}
 
-	if c.config.webDavHost != "" {
+	if os.Getenv("WEBDAV_HOST") != "" {
 		webDav := webdavfilesystem.WebDAV{
-			Host: c.config.webDavHost,
-			User: c.config.webDavUser,
-			Pass: c.config.webDavPass,
+			Host: os.Getenv("WEBDAV_HOST"),
+			User: os.Getenv("WEBDAV_USER"),
+			Pass: os.Getenv("WEBDAV_PASS"),
 		}
 		fileSystems["WEBDAV"] = webDav
 	}
