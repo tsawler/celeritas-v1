@@ -133,29 +133,6 @@ func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) 
 
 	}
 
-	//if provider == "github" {
-	//	// call remote api and revoke token
-	//	clientID := os.Getenv("GITHUB_CLIENT_ID")
-	//	clientSecret := os.Getenv("GITHUB_SECRET")
-	//	token := s.Session.Get(r.Context(), "social_token").(string)
-	//
-	//	payload := Payload{
-	//		AccessToken: token,
-	//	}
-	//
-	//	jsonReq, _ := json.Marshal(payload)
-	//	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("https://%s:%s@api.github.com/applications/%s/grant", clientID, clientSecret, clientID), bytes.NewBuffer(jsonReq))
-	//	if err != nil {
-	//		log.Println("Error building request", err)
-	//	}
-	//
-	//	client := &http.Client{}
-	//	_, err = client.Do(req)
-	//	if err != nil {
-	//		log.Println("Error calling client.Do()", err)
-	//	}
-	//}
-
 	s.Session.RenewToken(r.Context())
 	s.Session.Remove(r.Context(), "userID")
 	s.Session.Remove(r.Context(), "remember_token")
