@@ -2,25 +2,25 @@ package handlers
 
 import (
 	"bytes"
-    "crypto/sha256"
-    "encoding/base64"
-    "encoding/json"
-    "fmt"
-    "github.com/go-chi/chi/v5"
-    "github.com/gorilla/sessions"
-    "github.com/markbates/goth"
-    "github.com/markbates/goth/gothic"
-    "github.com/markbates/goth/providers/github"
-    "github.com/markbates/goth/providers/google"
-    "log"
-    "myapp/data"
-    "net/http"
-    "os"
-    "time"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/sessions"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/markbates/goth/providers/github"
+	"github.com/markbates/goth/providers/google"
+	"log"
+	"myapp/data"
+	"net/http"
+	"os"
+	"time"
 
-    "github.com/CloudyKit/jet/v6"
-    "github.com/tsawler/celeritas/mailer"
-    "github.com/tsawler/celeritas/urlsigner"
+	"github.com/CloudyKit/jet/v6"
+	"github.com/tsawler/celeritas/mailer"
+	"github.com/tsawler/celeritas/urlsigner"
 )
 
 // UserLogin displays the login page
@@ -133,6 +133,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 }
 
+// Forgot displays the forgot password form
 func (h *Handlers) Forgot(w http.ResponseWriter, r *http.Request) {
 	err := h.render(w, r, "forgot", nil, nil)
 	if err != nil {
@@ -235,6 +236,7 @@ func (h *Handlers) ResetPasswordForm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// PostResetPassword handles resetting the user's password
 func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 	// parse the form
 	err := r.ParseForm()
