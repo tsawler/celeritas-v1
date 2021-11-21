@@ -1,13 +1,18 @@
 package handlers
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/github"
+	"github.com/markbates/goth/providers/google"
+	"log"
 	"myapp/data"
 	"net/http"
 	"os"
@@ -265,68 +270,147 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 }
 
-func (h *Handlers) InitSocialAuth() {
-	githubKey := "Iv1.7dba98ae39289016"
-	githubSecret := "1d6a0edd694e37177adf78450a98c55c88f1811c"
+// InitSocialAuth sets up our package for the providers
+// we want to  implement
+func (h *Handlers) InitSocialAuth(r *http.Request) {
+	m := make(map[string]string)
+
+	m["github"] = "Github"
+	m["google"] = "Google"
 
 	scope := []string{"user"}
 
-	provider := github.New(
-		githubKey,
-		githubSecret,
-		"http://localhost:4000/auth/github/callback",
-		scope...,
+	goth.UseProviders(
+		github.New(os.Getenv("GITHUB_KEY"), os.Getenv("GITHUB_SECRET"), "http://localhost:4000/auth/github/callback", scope...),
+		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback"),
 	)
 
 	var providers []goth.Provider
-	providers = append(providers, provider)
 
 	goth.UseProviders(providers...)
 
 	key := os.Getenv("KEY")
 	maxAge := 86400 * 30
-	store := sessions.NewCookieStore([]byte(key))
-	store.MaxAge(maxAge)
-	store.Options.Path = "/"
-	store.Options.HttpOnly = true
-	store.Options.Secure = true
+	st := sessions.NewCookieStore([]byte(key))
+	st.MaxAge(maxAge)
+	st.Options.Path = "/"
+	st.Options.HttpOnly = true
+	st.Options.Secure = false
 
-	gothic.Store = store
+	gothic.Store = st
 }
 
-func (h *Handlers) GithubLogin(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth()
+// SocialLogin attempts to log the user in via social media
+func (h *Handlers) SocialLogin(w http.ResponseWriter, r *http.Request) {
+	// save provider type in session (we need it for things like
+	// logging out, later on)
+	provider := chi.URLParam(r, "provider")
+
+	h.InitSocialAuth(r)
+	h.App.Session.Put(r.Context(), "social_provider", provider)
+
 	if _, err := gothic.CompleteUserAuth(w, r); err == nil {
+		// already logged in
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	} else {
+		// attempt login
 		gothic.BeginAuthHandler(w, r)
 	}
 }
 
+// SocialMediaCallback is called after the user agrees to try to log in;
+// note that goth cookies are internal and only used as part of the auth flow, so
+// our application must maintain its own session/authentication state
+// from the data provided back after calling gothic.CompleteUserAuth.
 func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth()
+	h.InitSocialAuth(r)
 	gUser, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
-		fmt.Fprintln(w, err)
+		h.App.Session.Put(r.Context(), "error", err.Error())
+		http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 		return
 	}
-	h.App.InfoLog.Println("User", gUser.Email)
-	//w.Write([]byte(gUser.Email))
+
+	// TODO -- look  up user by email address
+    var u data.User
+    testUser, err := u.GetByEmail(gUser.Email)
+    if err != nil {
+        // we don't have a user; add one
+    } else {
+        // we have the user; log the user in
+        log.Println(testUser.Email)
+    }
+
 	h.App.Session.Put(r.Context(), "userID", 1)
+	h.App.Session.Put(r.Context(), "social_token", gUser.AccessToken)
+	h.App.Session.Put(r.Context(), "social_email", gUser.Email)
+
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// SocialMediaLogout logs the user out of our app and, if possible,
+// revokes the auth token from the appropriate provider
 func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth()
+	h.InitSocialAuth(r)
+
+	provider := h.App.Session.Get(r.Context(), "social_provider").(string)
+
+	// call the appropriate api for our provider and revoke
+	// the auth token. Each provider has different logic for doing this
+	// (if it exists at all)
+	switch provider {
+	case "github":
+		// call remote api and revoke token
+		clientID := os.Getenv("GITHUB_CLIENT_ID")
+		clientSecret := os.Getenv("GITHUB_SECRET")
+		token := h.App.Session.Get(r.Context(), "social_token").(string)
+
+		// build the json payload
+		var payload struct {
+			AccessToken   string  `json:"access_token"`
+		}
+		payload.AccessToken = token
+
+		jsonReq, _ := json.Marshal(payload)
+		req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("https://%s:%s@api.github.com/applications/%s/grant", clientID, clientSecret, clientID), bytes.NewBuffer(jsonReq))
+		if err != nil {
+			log.Println("Error building request", err)
+		}
+
+		client := &http.Client{}
+		_, err = client.Do(req)
+		if err != nil {
+			log.Println("Error calling client.Do()", err)
+		}
+
+	case "google":
+		token := h.App.Session.Get(r.Context(), "social_token").(string)
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
+		if err != nil {
+			log.Println("Google: Error building request", err)
+		}
+
+		client := &http.Client{}
+		_, err = client.Do(req)
+		if err != nil {
+			log.Println("Google: Error calling client.Do()", err)
+		}
+	default:
+
+	}
+
+	// log user out of our app's session
 	h.App.Session.RenewToken(r.Context())
 	h.App.Session.Remove(r.Context(), "userID")
 	h.App.Session.Remove(r.Context(), "remember_token")
 	h.App.Session.Destroy(r.Context())
 	h.App.Session.RenewToken(r.Context())
 
-	err := gothic.Logout(w, r)
-	if err != nil {
-		h.App.ErrorLog.Println(err)
-	}
-	http.Redirect(w, r, "/users/login", http.StatusTemporaryRedirect)
+	// as far as I can tell, this does nothing of value,
+	// but we are supposed to call it, so why not?
+	gothic.Logout(w, r)
+
+	// redirect to login screen
+	w.Header().Set("Location", "/users/login")
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
