@@ -36,7 +36,7 @@ func (h *Handlers) UserLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -45,32 +45,32 @@ func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Models.Users.GetByEmail(email)
 	if err != nil {
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 		return
 	}
 
 	matches, err := user.PasswordMatches(password)
 	if err != nil {
-		w.Write([]byte("Error validating password"))
+		_, _ = w.Write([]byte("Error validating password"))
 		return
 	}
 
 	if !matches {
-		w.Write([]byte("Invalid password!"))
+		_, _ = w.Write([]byte("Invalid password!"))
 		return
 	}
 
 	// did the user check remember me?
 	if r.Form.Get("remember") == "remember" {
 		randomString := h.randomString(12)
-		hasher := sha256.New()
-		_, err := hasher.Write([]byte(randomString))
+		hash := sha256.New()
+		_, err := hash.Write([]byte(randomString))
 		if err != nil {
 			h.App.ErrorStatus(w, http.StatusBadRequest)
 			return
 		}
 
-		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+		sha := base64.URLEncoding.EncodeToString(hash.Sum(nil))
 		rm := data.RememberToken{}
 		err = rm.InsertToken(user.ID, sha)
 		if err != nil {
@@ -105,7 +105,7 @@ func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 // Logout logs the user out, removes any remember me cookie, and deletes
 // remember token from the database, if it exists
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
-	// delete the remember token if it exists
+	// delete remember token if it exists
 	if h.App.Session.Exists(r.Context(), "remember_token") {
 		rt := data.RememberToken{}
 		_ = rt.Delete(h.App.Session.GetString(r.Context(), "remember_token"))
@@ -125,11 +125,11 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &newCookie)
 
-	h.App.Session.RenewToken(r.Context())
+	_ = h.App.Session.RenewToken(r.Context())
 	h.App.Session.Remove(r.Context(), "userID")
 	h.App.Session.Remove(r.Context(), "remember_token")
-	h.App.Session.Destroy(r.Context())
-	h.App.Session.RenewToken(r.Context())
+	_ = h.App.Session.Destroy(r.Context())
+	_ = h.App.Session.RenewToken(r.Context())
 
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 }
@@ -174,16 +174,16 @@ func (h *Handlers) PostForgot(w http.ResponseWriter, r *http.Request) {
 	h.App.InfoLog.Println("Signed link is", signedLink)
 
 	// email the message
-	var data struct {
+	var mailData struct {
 		Link string
 	}
-	data.Link = signedLink
+	mailData.Link = signedLink
 
 	msg := mailer.Message{
 		To:       u.Email,
 		Subject:  "Password reset",
 		Template: "password-reset",
-		Data:     data,
+		Data:     mailData,
 		From:     "admin@example.com",
 	}
 
@@ -400,7 +400,7 @@ func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{}
 		_, err = client.Do(req)
 		if err != nil {
-			log.Println("Error calling client.Do()", err)
+			log.Println("Error logging out of github", err)
 		}
 
 	case "google":
@@ -415,17 +415,17 @@ func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// log user out of our app's session
-	h.App.Session.RenewToken(r.Context())
+	_ = h.App.Session.RenewToken(r.Context())
 	h.App.Session.Remove(r.Context(), "userID")
 	h.App.Session.Remove(r.Context(), "remember_token")
-	h.App.Session.Destroy(r.Context())
-	h.App.Session.RenewToken(r.Context())
+	_ = h.App.Session.Destroy(r.Context())
+	_ = h.App.Session.RenewToken(r.Context())
 
 	// as far as I can tell, this does nothing of value,
 	// but we are supposed to call it, so why not?
-	gothic.Logout(w, r)
+	_ = gothic.Logout(w, r)
 
-	// redirect to login screen
+	// redirect to log in screen
 	w.Header().Set("Location", "/users/login")
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
