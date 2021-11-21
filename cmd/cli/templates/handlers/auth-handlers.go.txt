@@ -16,6 +16,7 @@ import (
 	"myapp/data"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/CloudyKit/jet/v6"
@@ -276,10 +277,11 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 // we want to  implement
 func (h *Handlers) InitSocialAuth() {
 	scope := []string{"user"}
+	gScope := []string{"email", "profile"}
 
 	goth.UseProviders(
 		github.New(os.Getenv("GITHUB_KEY"), os.Getenv("GITHUB_SECRET"), "http://localhost:4000/auth/github/callback", scope...),
-		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback"),
+		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback", gScope...),
 	)
 
 	var providers []goth.Provider
@@ -328,18 +330,25 @@ func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("Email is", gUser.Email)
-
 	// look  up user by email address
 	var u data.User
 	var testUser *data.User
 	testUser, err = u.GetByEmail(gUser.Email)
 	if err != nil {
+		provider := h.App.Session.Get(r.Context(), "social_provider").(string)
 		// we don't have a user; add one
 		var newUser data.User
 		newUser.Email = gUser.Email
-		newUser.FirstName = gUser.FirstName
-		newUser.LastName = gUser.LastName
+		if provider == "github" {
+			exploded := strings.Split(gUser.Name, " ")
+			newUser.FirstName = exploded[0]
+			if len(exploded) > 1 {
+				newUser.LastName = exploded[1]
+			}
+		} else {
+			newUser.FirstName = gUser.FirstName
+			newUser.LastName = gUser.LastName
+		}
 		newUser.Active = 1
 		newUser.Password = h.randomString(20)
 		newUser.CreatedAt = time.Now()
