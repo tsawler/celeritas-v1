@@ -275,11 +275,6 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 // InitSocialAuth sets up our package for the providers
 // we want to  implement
 func (h *Handlers) InitSocialAuth() {
-	m := make(map[string]string)
-
-	m["github"] = "Github"
-	m["google"] = "Google"
-
 	scope := []string{"user"}
 
 	goth.UseProviders(
