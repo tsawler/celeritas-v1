@@ -24,12 +24,13 @@ func (s *SocialLogin) InitSocialAuth(r *http.Request) {
 	m := make(map[string]string)
 
 	m["github"] = "Github"
+	m["google"] = "Google"
 
 	scope := []string{"user"}
 
 	goth.UseProviders(
 		github.New(os.Getenv("GITHUB_KEY"), os.Getenv("GITHUB_SECRET"), "http://localhost:4000/auth/github/callback", scope...),
-		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback", scope...),
+		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback"),
 	)
 
 	var providers []goth.Provider
@@ -93,7 +94,8 @@ func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) 
 
 	provider := s.Session.Get(r.Context(), "social_provider").(string)
 
-	if provider == "github" {
+	switch provider {
+	case "github":
 		// call remote api and revoke token
 		clientID := os.Getenv("GITHUB_CLIENT_ID")
 		clientSecret := os.Getenv("GITHUB_SECRET")
@@ -114,7 +116,45 @@ func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			log.Println("Error calling client.Do()", err)
 		}
+
+	case "google":
+		token := s.Session.Get(r.Context(), "social_token").(string)
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
+		if err != nil {
+			log.Println("Google: Error building request", err)
+		}
+
+		client := &http.Client{}
+		_, err = client.Do(req)
+		if err != nil {
+			log.Println("Google: Error calling client.Do()", err)
+		}
+	default:
+
 	}
+
+	//if provider == "github" {
+	//	// call remote api and revoke token
+	//	clientID := os.Getenv("GITHUB_CLIENT_ID")
+	//	clientSecret := os.Getenv("GITHUB_SECRET")
+	//	token := s.Session.Get(r.Context(), "social_token").(string)
+	//
+	//	payload := Payload{
+	//		AccessToken: token,
+	//	}
+	//
+	//	jsonReq, _ := json.Marshal(payload)
+	//	req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("https://%s:%s@api.github.com/applications/%s/grant", clientID, clientSecret, clientID), bytes.NewBuffer(jsonReq))
+	//	if err != nil {
+	//		log.Println("Error building request", err)
+	//	}
+	//
+	//	client := &http.Client{}
+	//	_, err = client.Do(req)
+	//	if err != nil {
+	//		log.Println("Error calling client.Do()", err)
+	//	}
+	//}
 
 	s.Session.RenewToken(r.Context())
 	s.Session.Remove(r.Context(), "userID")
