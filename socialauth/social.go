@@ -16,10 +16,14 @@ import (
 	"os"
 )
 
+// SocialLogin is the type for social auth, and keeps track of the
+// application session for the authenticated user
 type SocialLogin struct {
 	Session *scs.SessionManager
 }
 
+// InitSocialAuth sets up our package for the providers
+// we want to  implement
 func (s *SocialLogin) InitSocialAuth(r *http.Request) {
 	m := make(map[string]string)
 
@@ -48,8 +52,10 @@ func (s *SocialLogin) InitSocialAuth(r *http.Request) {
 	gothic.Store = st
 }
 
+// SocialLogin attempts to log the user in via social media
 func (s *SocialLogin) SocialLogin(w http.ResponseWriter, r *http.Request) {
-	// save provider type in session
+	// save provider type in session (we need it for things like
+	// logging out, later on)
 	provider := chi.URLParam(r, "provider")
 
 	s.InitSocialAuth(r)
@@ -85,15 +91,21 @@ func (s *SocialLogin) SocialMediaCallback(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Payload is the json encoding type for GitHub API
 type Payload struct {
 	AccessToken string `json:"access_token"`
 }
 
+// SocialMediaLogout logs the user out of our app and, if possible,
+// revokes the auth token from the appropriate provider
 func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 	s.InitSocialAuth(r)
 
 	provider := s.Session.Get(r.Context(), "social_provider").(string)
 
+	// call the appropriate api for our provider and revoke
+	// the auth token. Each provider has different logic for doing this
+	// (it it exists at all)
 	switch provider {
 	case "github":
 		// call remote api and revoke token
@@ -133,14 +145,18 @@ func (s *SocialLogin) SocialMediaLogout(w http.ResponseWriter, r *http.Request) 
 
 	}
 
+	// log user out of our app's session
 	s.Session.RenewToken(r.Context())
 	s.Session.Remove(r.Context(), "userID")
 	s.Session.Remove(r.Context(), "remember_token")
 	s.Session.Destroy(r.Context())
 	s.Session.RenewToken(r.Context())
 
+	// as far as I can tell, this does nothing of value,
+	// but we are supposed to call it, so why not?
 	gothic.Logout(w, r)
 
+	// redirect to login screen
 	w.Header().Set("Location", "/users/login")
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
