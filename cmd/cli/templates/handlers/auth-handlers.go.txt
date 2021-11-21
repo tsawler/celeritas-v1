@@ -272,7 +272,7 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 
 // InitSocialAuth sets up our package for the providers
 // we want to  implement
-func (h *Handlers) InitSocialAuth(r *http.Request) {
+func (h *Handlers) InitSocialAuth() {
 	m := make(map[string]string)
 
 	m["github"] = "Github"
@@ -306,7 +306,7 @@ func (h *Handlers) SocialLogin(w http.ResponseWriter, r *http.Request) {
 	// logging out, later on)
 	provider := chi.URLParam(r, "provider")
 
-	h.InitSocialAuth(r)
+	h.InitSocialAuth()
 	h.App.Session.Put(r.Context(), "social_provider", provider)
 
 	if _, err := gothic.CompleteUserAuth(w, r); err == nil {
@@ -323,7 +323,7 @@ func (h *Handlers) SocialLogin(w http.ResponseWriter, r *http.Request) {
 // our application must maintain its own session/authentication state
 // from the data provided back after calling gothic.CompleteUserAuth.
 func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth(r)
+	h.InitSocialAuth()
 	gUser, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
 		h.App.Session.Put(r.Context(), "error", err.Error())
@@ -332,14 +332,14 @@ func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO -- look  up user by email address
-    var u data.User
-    testUser, err := u.GetByEmail(gUser.Email)
-    if err != nil {
-        // we don't have a user; add one
-    } else {
-        // we have the user; log the user in
-        log.Println(testUser.Email)
-    }
+	var u data.User
+	testUser, err := u.GetByEmail(gUser.Email)
+	if err != nil {
+		// we don't have a user; add one
+	} else {
+		// we have the user; log the user in
+		log.Println(testUser.Email)
+	}
 
 	h.App.Session.Put(r.Context(), "userID", 1)
 	h.App.Session.Put(r.Context(), "social_token", gUser.AccessToken)
@@ -351,7 +351,7 @@ func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
 // SocialMediaLogout logs the user out of our app and, if possible,
 // revokes the auth token from the appropriate provider
 func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth(r)
+	h.InitSocialAuth()
 
 	provider := h.App.Session.Get(r.Context(), "social_provider").(string)
 
@@ -367,7 +367,7 @@ func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 
 		// build the json payload
 		var payload struct {
-			AccessToken   string  `json:"access_token"`
+			AccessToken string `json:"access_token"`
 		}
 		payload.AccessToken = token
 
@@ -385,10 +385,11 @@ func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 
 	case "google":
 		token := h.App.Session.Get(r.Context(), "social_token").(string)
-        _, err := http.PostForm(fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
-        if err != nil {
-            log.Println("Google: Error logging in via Google", err)
-        }
+
+		_, err := http.PostForm(fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
+		if err != nil {
+			log.Println("Google: Error logging in via Google", err)
+		}
 	default:
 
 	}
