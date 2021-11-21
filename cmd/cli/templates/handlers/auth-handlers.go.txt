@@ -2,25 +2,25 @@ package handlers
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/sessions"
-	"github.com/markbates/goth"
-	"github.com/markbates/goth/gothic"
-	"github.com/markbates/goth/providers/github"
-	"github.com/markbates/goth/providers/google"
-	"log"
-	"myapp/data"
-	"net/http"
-	"os"
-	"time"
+    "crypto/sha256"
+    "encoding/base64"
+    "encoding/json"
+    "fmt"
+    "github.com/go-chi/chi/v5"
+    "github.com/gorilla/sessions"
+    "github.com/markbates/goth"
+    "github.com/markbates/goth/gothic"
+    "github.com/markbates/goth/providers/github"
+    "github.com/markbates/goth/providers/google"
+    "log"
+    "myapp/data"
+    "net/http"
+    "os"
+    "time"
 
-	"github.com/CloudyKit/jet/v6"
-	"github.com/tsawler/celeritas/mailer"
-	"github.com/tsawler/celeritas/urlsigner"
+    "github.com/CloudyKit/jet/v6"
+    "github.com/tsawler/celeritas/mailer"
+    "github.com/tsawler/celeritas/urlsigner"
 )
 
 // UserLogin displays the login page
@@ -385,16 +385,10 @@ func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
 
 	case "google":
 		token := h.App.Session.Get(r.Context(), "social_token").(string)
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
-		if err != nil {
-			log.Println("Google: Error building request", err)
-		}
-
-		client := &http.Client{}
-		_, err = client.Do(req)
-		if err != nil {
-			log.Println("Google: Error calling client.Do()", err)
-		}
+        _, err := http.PostForm(fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
+        if err != nil {
+            log.Println("Google: Error logging in via Google", err)
+        }
 	default:
 
 	}
