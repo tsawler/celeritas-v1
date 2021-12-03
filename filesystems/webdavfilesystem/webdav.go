@@ -5,7 +5,6 @@ import (
 	"github.com/studio-b12/gowebdav"
 	"github.com/tsawler/celeritas/filesystems"
 	"io"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -27,14 +26,12 @@ func (w *WebDAV) Put(fileName, folder string) error {
 
 	file, err := os.Open(fileName)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	defer file.Close()
 
-	err = client.WriteStream(path.Base(fileName), file, 0644)
+	err = client.WriteStream(fmt.Sprintf("%s/%s", folder, path.Base(fileName)), file, 0644)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 
