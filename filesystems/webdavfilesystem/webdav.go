@@ -43,16 +43,16 @@ func (w *WebDAV) List(prefix string) ([]filesystems.Listing, error) {
 
 	client := w.getCredentials()
 	files, _ := client.ReadDir(prefix)
-	for _, key := range files {
-		if !strings.HasPrefix(key.Name(), ".") {
-			b := float64(key.Size())
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), ".") {
+			b := float64(file.Size())
 			kb := b / 1024
 			mb := kb / 1024
 			current := filesystems.Listing{
-				LastModified: key.ModTime(),
-				Key:          key.Name(),
+				LastModified: file.ModTime(),
+				Key:          file.Name(),
 				Size:         mb,
-				IsDir:        key.IsDir(),
+				IsDir:        file.IsDir(),
 			}
 			listing = append(listing, current)
 		}
