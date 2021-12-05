@@ -3,6 +3,7 @@ package render
 import (
 	"errors"
 	"fmt"
+	"github.com/dustin/go-humanize"
 	"html/template"
 	"log"
 	"net/http"
@@ -99,6 +100,9 @@ func (c *Render) JetPage(w http.ResponseWriter, r *http.Request, templateName st
 
 	td = c.defaultData(td, r)
 
+	// add template functions
+	c.addTemplateFunctions()
+
 	t, err := c.JetViews.GetTemplate(fmt.Sprintf("%s.jet", templateName))
 	if err != nil {
 		log.Println(err)
@@ -110,4 +114,22 @@ func (c *Render) JetPage(w http.ResponseWriter, r *http.Request, templateName st
 		return err
 	}
 	return nil
+}
+
+func (c *Render) addTemplateFunctions() {
+	c.JetViews.AddGlobal("formatCurrency", func(s float32) string {
+		return formatCurrency(s)
+	})
+
+	c.JetViews.AddGlobal("formatFloat", func(s float32) string {
+		return formatFloat(s)
+	})
+}
+
+func formatCurrency(x float32) string {
+	return fmt.Sprintf("$%s", humanize.Comma(int64(x)))
+}
+
+func formatFloat(x float32) string {
+	return fmt.Sprintf("%0.2f", x)
 }

@@ -2,17 +2,14 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"strings"
-	"time"
-
+	"github.com/fatih/color"
 	"github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
-	"github.com/fatih/color"
+	"io/ioutil"
+	"strings"
 )
 
-func doMake(arg2, arg3 string) error {
+func doMake(arg2, arg3, arg4 string) error {
 
 	switch arg2 {
 	case "key":
@@ -20,22 +17,28 @@ func doMake(arg2, arg3 string) error {
 		color.Yellow("32 character encryption key: %s", rnd)
 
 	case "migration":
-		dbType := cel.DB.DataType
-		if arg3 == ""{
-			exitGracefully(errors.New("you must give the migration a name"))
+		checkForDB()
+
+		migrationType := "fizz"
+		var up, down string
+
+		if arg4 == "fizz" || arg4 == "" {
+			upBytes, _ := templateFS.ReadFile("templates/migrations/migration_up.fizz")
+			downBytes, _ := templateFS.ReadFile("templates/migrations/migration_down.fizz")
+
+			up = string(upBytes)
+			down = string(downBytes)
+
+			if cel.DB.DataType == "postgres" || cel.DB.DataType == "postgresql" || cel.DB.DataType == "pgx" {
+				up = up + `
+sql("alter table some_table alter column created_at set default now();")
+sql("alter table some_table alter column updated_at set default now();")`
+			}
+		} else {
+			migrationType = "sql"
 		}
 
-		fileName := fmt.Sprintf("%d_%s", time.Now().UnixMicro(), arg3)
-
-		upFile := cel.RootPath + "/migrations/" + fileName + "." + dbType + ".up.sql"
-		downFile := cel.RootPath + "/migrations/" + fileName + "." + dbType + ".down.sql"
-
-		err := copyFilefromTemplate("templates/migrations/migration."+dbType+".up.sql", upFile)
-		if err != nil {
-			exitGracefully(err)
-		}
-
-		err = copyFilefromTemplate("templates/migrations/migration."+dbType+".down.sql", downFile)
+		err := cel.CreatePopMigration([]byte(up), []byte(down), arg3, migrationType)
 		if err != nil {
 			exitGracefully(err)
 		}
@@ -90,7 +93,7 @@ func doMake(arg2, arg3 string) error {
 			modelName = plur.Singular(arg3)
 			tableName = strings.ToLower(tableName)
 		} else {
-			tableName= strings.ToLower(plur.Plural(arg3))
+			tableName = strings.ToLower(plur.Plural(arg3))
 		}
 
 		fileName := cel.RootPath + "/data/" + strings.ToLower(modelName) + ".go"

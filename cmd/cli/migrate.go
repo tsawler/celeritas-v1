@@ -1,34 +1,39 @@
 package main
 
+import "github.com/gobuffalo/pop"
+
 func doMigrate(arg2, arg3 string) error {
-	dsn := getDSN()
+	// get a connection for pop
+	tx, err := pop.Connect("development")
+	if err != nil {
+		exitGracefully(err)
+	}
+	defer tx.Close()
 
 	// run the migration command
 	switch arg2 {
 	case "up":
-		err := cel.MigrateUp(dsn)
+		err := cel.RunPopMigrations(tx)
 		if err != nil {
+			exitGracefully(err)
 			return err
 		}
 
 	case "down":
 		if arg3 == "all" {
-			err := cel.MigrateDownAll(dsn)
+			err := cel.PopMigrateDown(tx, -1)
 			if err != nil {
 				return err
 			}
 		} else {
-			err := cel.Steps(-1, dsn)
+			err := cel.PopMigrateDown(tx, 1)
 			if err != nil {
 				return err
 			}
 		}
+
 	case "reset":
-		err := cel.MigrateDownAll(dsn)
-			if err != nil {
-				return err
-			}
-		err = cel.MigrateUp(dsn)
+		err := cel.PopMigrateReset(tx)
 		if err != nil {
 			return err
 		}
