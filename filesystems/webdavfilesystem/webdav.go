@@ -104,6 +104,5 @@ func (w *WebDAV) Get(destination string, items ...string) error {
 
 func (w *WebDAV) CreateDir(p string) error {
 	client := w.getCredentials()
-
-	return client.Mkdir(p, 0655)
+	return client.MkdirAll(p, 0655)
 }
