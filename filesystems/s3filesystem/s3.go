@@ -197,3 +197,7 @@ func (s *S3) Get(destination string, items ...string) error {
 	}
 	return nil
 }
+
+func (s *S3) CreateDir(p string) error {
+	return nil
+}

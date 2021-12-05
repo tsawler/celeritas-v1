@@ -119,3 +119,7 @@ func (m *Minio) Get(destination string, items ...string) error {
 	}
 	return nil
 }
+
+func (m *Minio) CreateDir(p string) error {
+	return nil
+}

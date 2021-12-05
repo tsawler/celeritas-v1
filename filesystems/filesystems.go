@@ -3,10 +3,11 @@ package filesystems
 import "time"
 
 type FS interface {
-	Put(fileName, folder string) error
+	CreateDir(p string) error
+	Delete(itemsToDelete []string) bool
 	Get(destination string, items ...string) error
 	List(prefix string) ([]Listing, error)
-	Delete(itemsToDelete []string) bool
+	Put(fileName, folder string) error
 }
 
 type Listing struct {
