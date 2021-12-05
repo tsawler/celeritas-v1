@@ -16,17 +16,20 @@ import (
 func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS) error {
 	fileName, err := c.getFileUpload(r)
 	if err != nil {
+		c.ErrorLog.Println(err)
 		return err
 	}
 
 	if fs != nil {
 		err = fs.Put(fileName, folder)
 		if err != nil {
+			c.ErrorLog.Println(err)
 			return err
 		}
 	} else {
 		err = os.Rename(fileName, fmt.Sprintf("./%s/%s", folder, path.Base(fileName)))
 		if err != nil {
+			c.ErrorLog.Println(err)
 			return err
 		}
 	}
