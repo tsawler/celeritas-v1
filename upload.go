@@ -6,17 +6,15 @@ import (
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/tsawler/celeritas/filesystems"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 )
 
 // UploadFile uploads fileName (full path) to folder for the specified file system fs; if
 // fs is nil, then we upload to the local file system
 func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS) error {
-	fileName, err := getFileUpload(r)
+	fileName, err := c.getFileUpload(r)
 	if err != nil {
 		return err
 	}
@@ -37,16 +35,8 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 }
 
 // getFileUpload gets an uploaded file from the request and stores it in the tmp folder
-func getFileUpload(r *http.Request) (string, error) {
-	var maxUploadSize int64
-
-	if max, err := strconv.Atoi(os.Getenv("MAX_UPLOAD_SIZE")); err != nil {
-		maxUploadSize = 10 << 20
-	} else {
-		maxUploadSize = int64(max)
-	}
-
-	err := r.ParseMultipartForm(maxUploadSize)
+func (c *Celeritas) getFileUpload(r *http.Request) (string, error) {
+	err := r.ParseMultipartForm(c.config.uploads.maxUploadSize)
 	if err != nil {
 		return "", err
 	}
@@ -70,16 +60,16 @@ func getFileUpload(r *http.Request) (string, error) {
 		return "", err
 	}
 
-	log.Println("Mime type is", mimeType.String())
+	//log.Println("Mime type is", mimeType.String())
+	//
+	//validMimeTypes := []string{
+	//	"image/gif",
+	//	"image/jpeg",
+	//	"image/png",
+	//	"application/pdf",
+	//}
 
-	validMimeTypes := []string{
-		"image/gif",
-		"image/jpeg",
-		"image/png",
-		"application/pdf",
-	}
-
-	if !inSlice(validMimeTypes, mimeType.String()) {
+	if !inSlice(c.config.uploads.allowedMimeTypes, mimeType.String()) {
 		return "", errors.New("invalid mimetype")
 	}
 
