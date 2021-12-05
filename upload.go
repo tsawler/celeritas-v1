@@ -92,6 +92,13 @@ func getFileUpload(r *http.Request) (string, error) {
 		return "", err
 	}
 
+	// have to move back to start of file
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+
 	log.Println("Mime type is", mimeType.String())
 
 	validMimeTypes := []string{
