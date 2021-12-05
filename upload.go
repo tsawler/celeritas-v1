@@ -38,6 +38,7 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 }
 
 // getFileUpload gets an uploaded file from the request and stores it in the tmp folder
+// File uploads are limited to those specified in .env, by mime type
 func (c *Celeritas) getFileUpload(r *http.Request) (string, error) {
 	err := r.ParseMultipartForm(c.config.uploads.maxUploadSize)
 	if err != nil {
