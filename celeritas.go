@@ -149,6 +149,20 @@ func (c *Celeritas) New(rootPath string) error {
 	c.Routes = c.routes().(*chi.Mux)
 	c.MaintenanceMode = false
 
+	// file uploads
+	exploded := strings.Split(os.Getenv("ALLOWED_FILETYPES"), ",")
+	var mimeTypes []string
+	for _, m := range exploded {
+		mimeTypes = append(mimeTypes, m)
+	}
+
+	var maxUploadSize int64
+	if max, err := strconv.Atoi(os.Getenv("MAX_UPLOAD_SIZE")); err != nil {
+		maxUploadSize = 10 << 20
+	} else {
+		maxUploadSize = int64(max)
+	}
+
 	c.config = config{
 		port:     os.Getenv("PORT"),
 		rpcPort:  os.Getenv("RPC_PORT"),
@@ -170,24 +184,10 @@ func (c *Celeritas) New(rootPath string) error {
 			password: os.Getenv("REDIS_PASSWORD"),
 			prefix:   os.Getenv("REDIS_PREFIX"),
 		},
-	}
-
-	// file uploads
-	exploded := strings.Split(os.Getenv("ALLOWED_FILETYPES"), ",")
-	var mimeTypes []string
-	for _, m := range exploded {
-		mimeTypes = append(mimeTypes, m)
-	}
-	var maxUploadSize int64
-	if max, err := strconv.Atoi(os.Getenv("MAX_UPLOAD_SIZE")); err != nil {
-		maxUploadSize = 10 << 20
-	} else {
-		maxUploadSize = int64(max)
-	}
-
-	c.config.uploads = uploadConfig{
-		maxUploadSize:    maxUploadSize,
-		allowedMimeTypes: mimeTypes,
+		uploads: uploadConfig{
+			maxUploadSize:    maxUploadSize,
+			allowedMimeTypes: mimeTypes,
+		},
 	}
 
 	secure := true
