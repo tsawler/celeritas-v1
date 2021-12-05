@@ -2,14 +2,8 @@ package celeritas
 
 import (
 	"fmt"
-	"github.com/tsawler/celeritas/filesystems/miniofilesystem"
-	"github.com/tsawler/celeritas/filesystems/s3filesystem"
-	"github.com/tsawler/celeritas/filesystems/sftpfilesystem"
-	"github.com/tsawler/celeritas/filesystems/webdavfilesystem"
 	"log"
-	"net"
 	"net/http"
-	"net/rpc"
 	"os"
 	"strconv"
 	"strings"
@@ -34,30 +28,27 @@ var myRedisCache *cache.RedisCache
 var myBadgerCache *cache.BadgerCache
 var redisPool *redis.Pool
 var badgerConn *badger.DB
-var maintenanceMode bool
 
 // Celeritas is the overall type for the Celeritas package. Members that are exported in this type
 // are available to any application that uses it.
 type Celeritas struct {
-	AppName         string
-	Debug           bool
-	Version         string
-	ErrorLog        *log.Logger
-	InfoLog         *log.Logger
-	RootPath        string
-	Routes          *chi.Mux
-	Render          *render.Render
-	Session         *scs.SessionManager
-	DB              Database
-	JetViews        *jet.Set
-	config          config
-	EncryptionKey   string
-	Cache           cache.Cache
-	Scheduler       *cron.Cron
-	Mail            mailer.Mail
-	Server          Server
-	MaintenanceMode bool
-	FileSystems     map[string]interface{}
+	AppName       string
+	Debug         bool
+	Version       string
+	ErrorLog      *log.Logger
+	InfoLog       *log.Logger
+	RootPath      string
+	Routes        *chi.Mux
+	Render        *render.Render
+	Session       *scs.SessionManager
+	DB            Database
+	JetViews      *jet.Set
+	config        config
+	EncryptionKey string
+	Cache         cache.Cache
+	Scheduler     *cron.Cron
+	Mail          mailer.Mail
+	Server        Server
 }
 
 type Server struct {
@@ -74,8 +65,6 @@ type config struct {
 	sessionType string
 	database    databaseConfig
 	redis       redisConfig
-	rpcPort     string
-	uploads     uploadConfig
 }
 
 // New reads the .env file, creates our application config, populates the Celeritas type with settings
@@ -147,25 +136,9 @@ func (c *Celeritas) New(rootPath string) error {
 	c.RootPath = rootPath
 	c.Mail = c.createMailer()
 	c.Routes = c.routes().(*chi.Mux)
-	c.MaintenanceMode = false
-
-	// file uploads
-	exploded := strings.Split(os.Getenv("ALLOWED_FILETYPES"), ",")
-	var mimeTypes []string
-	for _, m := range exploded {
-		mimeTypes = append(mimeTypes, m)
-	}
-
-	var maxUploadSize int64
-	if max, err := strconv.Atoi(os.Getenv("MAX_UPLOAD_SIZE")); err != nil {
-		maxUploadSize = 10 << 20
-	} else {
-		maxUploadSize = int64(max)
-	}
 
 	c.config = config{
 		port:     os.Getenv("PORT"),
-		rpcPort:  os.Getenv("RPC_PORT"),
 		renderer: os.Getenv("RENDERER"),
 		cookie: cookieConfig{
 			name:     os.Getenv("COOKIE_NAME"),
@@ -184,10 +157,6 @@ func (c *Celeritas) New(rootPath string) error {
 			password: os.Getenv("REDIS_PASSWORD"),
 			prefix:   os.Getenv("REDIS_PREFIX"),
 		},
-		uploads: uploadConfig{
-			maxUploadSize:    maxUploadSize,
-			allowedMimeTypes: mimeTypes,
-		},
 	}
 
 	secure := true
@@ -203,6 +172,7 @@ func (c *Celeritas) New(rootPath string) error {
 	}
 
 	// create session
+
 	sess := session.Session{
 		CookieLifetime: c.config.cookie.lifetime,
 		CookiePersist:  c.config.cookie.persist,
@@ -235,61 +205,9 @@ func (c *Celeritas) New(rootPath string) error {
 	}
 
 	c.createRenderer()
-	c.FileSystems = c.createFileSystems()
-
 	go c.Mail.ListenForMail()
 
 	return nil
-}
-
-func (c *Celeritas) createFileSystems() map[string]interface{} {
-	fileSystems := make(map[string]interface{})
-	if os.Getenv("S3_KEY") != "" {
-		s3 := s3filesystem.S3{
-			Key:      os.Getenv("S3_KEY"),
-			Secret:   os.Getenv("S3_SECRET"),
-			Region:   os.Getenv("S3_REGION"),
-			Endpoint: os.Getenv("S3_ENDPOINT"),
-			Bucket:   os.Getenv("S3_BUCKET"),
-		}
-		fileSystems["S3"] = s3
-	}
-
-	if os.Getenv("MINIO_SECRET") != "" {
-		useSSL := false
-		if strings.ToLower(os.Getenv("MINIO_USESSL")) == "true" {
-			useSSL = true
-		}
-		minio := miniofilesystem.Minio{
-			Endpoint: os.Getenv("MINIO_ENDPOINT"),
-			Key:      os.Getenv("MINIO_KEY"),
-			Secret:   os.Getenv("MINIO_SECRET"),
-			UseSSL:   useSSL,
-			Region:   os.Getenv("MINIO_REGION"),
-			Bucket:   os.Getenv("MINIO_BUCKET"),
-		}
-		fileSystems["MINIO"] = minio
-	}
-
-	if os.Getenv("SFTP_HOST") != "" {
-		sftp := sftpfilesystem.SFTP{
-			Host: os.Getenv("SFTP_HOST"),
-			User: os.Getenv("SFTP_USER"),
-			Pass: os.Getenv("SFTP_PASS"),
-			Port: os.Getenv("SFTP_PORT"),
-		}
-		fileSystems["SFTP"] = sftp
-	}
-
-	if os.Getenv("WEBDAV_HOST") != "" {
-		webDav := webdavfilesystem.WebDAV{
-			Host: os.Getenv("WEBDAV_HOST"),
-			User: os.Getenv("WEBDAV_USER"),
-			Pass: os.Getenv("WEBDAV_PASS"),
-		}
-		fileSystems["WEBDAV"] = webDav
-	}
-	return fileSystems
 }
 
 // Init creates necessary folders for our Celeritas application
@@ -328,7 +246,6 @@ func (c *Celeritas) ListenAndServe() {
 		defer badgerConn.Close()
 	}
 
-	go c.listenRPC()
 	c.InfoLog.Printf("Listening on port %s", os.Getenv("PORT"))
 	err := srv.ListenAndServe()
 	c.ErrorLog.Fatal(err)
@@ -458,44 +375,4 @@ func (c *Celeritas) BuildDSN() string {
 	}
 
 	return dsn
-}
-
-type RPCServer struct{}
-
-// MaintenanceMode is called over rpc, and sets the package level variable maintenanceMode
-// to true (server is in maintenance mode) or false (server is live). The maintenanceMode
-// variable is used by the CheckForMaintenanceMode middleware.
-func (r *RPCServer) MaintenanceMode(inMaintenanceMode bool, resp *string) error {
-	if inMaintenanceMode {
-		maintenanceMode = true
-		*resp = "Server in maintenance mode!"
-	} else {
-		maintenanceMode = false
-		*resp = "Server live!"
-	}
-	return nil
-}
-
-// listenRPC starts the rpc listener on the port specified in the .env file.
-func (c *Celeritas) listenRPC() {
-	// if nothing specified for rpc port, don't start
-	if c.config.rpcPort != "" {
-		c.InfoLog.Printf("Starting RPC Server on port %s...", c.config.rpcPort)
-		err := rpc.Register(new(RPCServer))
-		if err != nil {
-			return
-		}
-		listen, err := net.Listen("tcp", "127.0.0.1:"+c.config.rpcPort)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for {
-			rpcConn, err := listen.Accept()
-			if err != nil {
-				continue
-			}
-			go rpc.ServeConn(rpcConn)
-		}
-	}
 }

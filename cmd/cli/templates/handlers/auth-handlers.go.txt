@@ -1,22 +1,11 @@
 package handlers
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/gorilla/sessions"
-	"github.com/markbates/goth"
-	"github.com/markbates/goth/gothic"
-	"github.com/markbates/goth/providers/github"
-	"github.com/markbates/goth/providers/google"
-	"log"
 	"myapp/data"
 	"net/http"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/CloudyKit/jet/v6"
@@ -36,7 +25,7 @@ func (h *Handlers) UserLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		_, _ = w.Write([]byte(err.Error()))
+		w.Write([]byte(err.Error()))
 		return
 	}
 
@@ -45,32 +34,32 @@ func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.Models.Users.GetByEmail(email)
 	if err != nil {
-		_, _ = w.Write([]byte(err.Error()))
+		w.Write([]byte(err.Error()))
 		return
 	}
 
 	matches, err := user.PasswordMatches(password)
 	if err != nil {
-		_, _ = w.Write([]byte("Error validating password"))
+		w.Write([]byte("Error validating password"))
 		return
 	}
 
 	if !matches {
-		_, _ = w.Write([]byte("Invalid password!"))
+		w.Write([]byte("Invalid password!"))
 		return
 	}
 
 	// did the user check remember me?
 	if r.Form.Get("remember") == "remember" {
 		randomString := h.randomString(12)
-		hash := sha256.New()
-		_, err := hash.Write([]byte(randomString))
+		hasher := sha256.New()
+		_, err := hasher.Write([]byte(randomString))
 		if err != nil {
 			h.App.ErrorStatus(w, http.StatusBadRequest)
 			return
 		}
 
-		sha := base64.URLEncoding.EncodeToString(hash.Sum(nil))
+		sha := base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 		rm := data.RememberToken{}
 		err = rm.InsertToken(user.ID, sha)
 		if err != nil {
@@ -105,7 +94,7 @@ func (h *Handlers) PostUserLogin(w http.ResponseWriter, r *http.Request) {
 // Logout logs the user out, removes any remember me cookie, and deletes
 // remember token from the database, if it exists
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
-	// delete remember token if it exists
+	// delete the remember token if it exists
 	if h.App.Session.Exists(r.Context(), "remember_token") {
 		rt := data.RememberToken{}
 		_ = rt.Delete(h.App.Session.GetString(r.Context(), "remember_token"))
@@ -125,16 +114,15 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &newCookie)
 
-	_ = h.App.Session.RenewToken(r.Context())
+	h.App.Session.RenewToken(r.Context())
 	h.App.Session.Remove(r.Context(), "userID")
 	h.App.Session.Remove(r.Context(), "remember_token")
-	_ = h.App.Session.Destroy(r.Context())
-	_ = h.App.Session.RenewToken(r.Context())
+	h.App.Session.Destroy(r.Context())
+	h.App.Session.RenewToken(r.Context())
 
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
 }
 
-// Forgot displays the forgot password form
 func (h *Handlers) Forgot(w http.ResponseWriter, r *http.Request) {
 	err := h.render(w, r, "forgot", nil, nil)
 	if err != nil {
@@ -144,7 +132,7 @@ func (h *Handlers) Forgot(w http.ResponseWriter, r *http.Request) {
 }
 
 // PostForgot looks up a user by email, and if the user is found, generates
-// an email with a signed link to the reset password form
+// an email with a singed link to the reset password form
 func (h *Handlers) PostForgot(w http.ResponseWriter, r *http.Request) {
 	// parse form
 	err := r.ParseForm()
@@ -174,16 +162,16 @@ func (h *Handlers) PostForgot(w http.ResponseWriter, r *http.Request) {
 	h.App.InfoLog.Println("Signed link is", signedLink)
 
 	// email the message
-	var mailData struct {
+	var data struct {
 		Link string
 	}
-	mailData.Link = signedLink
+	data.Link = signedLink
 
 	msg := mailer.Message{
 		To:       u.Email,
 		Subject:  "Password reset",
 		Template: "password-reset",
-		Data:     mailData,
+		Data:     data,
 		From:     "admin@example.com",
 	}
 
@@ -237,7 +225,6 @@ func (h *Handlers) ResetPasswordForm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// PostResetPassword handles resetting the user's password
 func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 	// parse the form
 	err := r.ParseForm()
@@ -271,157 +258,4 @@ func (h *Handlers) PostResetPassword(w http.ResponseWriter, r *http.Request) {
 	// redirect
 	h.App.Session.Put(r.Context(), "flash", "Password reset. You can now log in.")
 	http.Redirect(w, r, "/users/login", http.StatusSeeOther)
-}
-
-// InitSocialAuth sets up our package for the providers
-// we want to  implement. In our case, we'll use GitHub and Google
-func (h *Handlers) InitSocialAuth() {
-	scope := []string{"user"}
-	gScope := []string{"email", "profile"}
-
-	goth.UseProviders(
-		github.New(os.Getenv("GITHUB_KEY"), os.Getenv("GITHUB_SECRET"), "http://localhost:4000/auth/github/callback", scope...),
-		google.New(os.Getenv("GOOGLE_KEY"), os.Getenv("GOOGLE_SECRET"), "http://localhost:4000/auth/google/callback", gScope...),
-	)
-
-	key := os.Getenv("KEY")
-	maxAge := 86400 * 30
-	st := sessions.NewCookieStore([]byte(key))
-	st.MaxAge(maxAge)
-	st.Options.Path = "/"
-	st.Options.HttpOnly = true
-	st.Options.Secure = false
-
-	gothic.Store = st
-}
-
-// SocialLogin attempts to log the user in via social media
-func (h *Handlers) SocialLogin(w http.ResponseWriter, r *http.Request) {
-	// save provider type in session (we need it for things like
-	// logging out, later on)
-	provider := chi.URLParam(r, "provider")
-
-	h.InitSocialAuth()
-	h.App.Session.Put(r.Context(), "social_provider", provider)
-
-	if _, err := gothic.CompleteUserAuth(w, r); err == nil {
-		// already logged in
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	} else {
-		// attempt login
-		gothic.BeginAuthHandler(w, r)
-	}
-}
-
-// SocialMediaCallback is called after the user agrees to try to log in;
-// note that goth cookies are internal and only used as part of the auth flow, so
-// our application must maintain its own session/authentication state
-// from the data provided back after calling gothic.CompleteUserAuth.
-func (h *Handlers) SocialMediaCallback(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth()
-	gUser, err := gothic.CompleteUserAuth(w, r)
-	if err != nil {
-		h.App.Session.Put(r.Context(), "error", err.Error())
-		http.Redirect(w, r, "/users/login", http.StatusSeeOther)
-		return
-	}
-
-	// look  up user by email address
-	var u data.User
-	var testUser *data.User
-	testUser, err = u.GetByEmail(gUser.Email)
-	if err != nil {
-		provider := h.App.Session.Get(r.Context(), "social_provider").(string)
-		// we don't have a user; add one
-		var newUser data.User
-		newUser.Email = gUser.Email
-		if provider == "github" {
-			exploded := strings.Split(gUser.Name, " ")
-			newUser.FirstName = exploded[0]
-			if len(exploded) > 1 {
-				newUser.LastName = exploded[1]
-			}
-		} else {
-			newUser.FirstName = gUser.FirstName
-			newUser.LastName = gUser.LastName
-		}
-		newUser.Active = 1
-		newUser.Password = h.randomString(20)
-		newUser.CreatedAt = time.Now()
-		newUser.UpdatedAt = time.Now()
-		_, err := newUser.Insert(newUser)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		testUser, _ = u.GetByEmail(gUser.Email)
-	}
-
-	h.App.Session.Put(r.Context(), "userID", testUser.ID)
-	h.App.Session.Put(r.Context(), "social_token", gUser.AccessToken)
-	h.App.Session.Put(r.Context(), "social_email", gUser.Email)
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-// SocialMediaLogout logs the user out of our app and, if possible,
-// revokes the auth token from the appropriate provider
-func (h *Handlers) SocialMediaLogout(w http.ResponseWriter, r *http.Request) {
-	h.InitSocialAuth()
-
-	provider := h.App.Session.Get(r.Context(), "social_provider").(string)
-
-	// call the appropriate api for our provider and revoke
-	// the auth token. Each provider has different logic for doing this
-	// (if it exists at all)
-	switch provider {
-	case "github":
-		// call remote api and revoke token
-		clientID := os.Getenv("GITHUB_CLIENT_ID")
-		clientSecret := os.Getenv("GITHUB_SECRET")
-		token := h.App.Session.Get(r.Context(), "social_token").(string)
-
-		// build the json payload
-		var payload struct {
-			AccessToken string `json:"access_token"`
-		}
-		payload.AccessToken = token
-
-		jsonReq, _ := json.Marshal(payload)
-		req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("https://%s:%s@api.github.com/applications/%s/grant", clientID, clientSecret, clientID), bytes.NewBuffer(jsonReq))
-		if err != nil {
-			log.Println("Error building request", err)
-		}
-
-		client := &http.Client{}
-		_, err = client.Do(req)
-		if err != nil {
-			log.Println("Error logging out of github", err)
-		}
-
-	case "google":
-		token := h.App.Session.Get(r.Context(), "social_token").(string)
-
-		_, err := http.PostForm(fmt.Sprintf("https://accounts.google.com/o/oauth2/revoke?%s", token), nil)
-		if err != nil {
-			log.Println("Google: Error logging in via Google", err)
-		}
-	default:
-
-	}
-
-	// log user out of our app's session
-	_ = h.App.Session.RenewToken(r.Context())
-	h.App.Session.Remove(r.Context(), "userID")
-	h.App.Session.Remove(r.Context(), "remember_token")
-	_ = h.App.Session.Destroy(r.Context())
-	_ = h.App.Session.RenewToken(r.Context())
-
-	// as far as I can tell, this does nothing of value,
-	// but we are supposed to call it, so why not?
-	_ = gothic.Logout(w, r)
-
-	// redirect to log in screen
-	w.Header().Set("Location", "/users/login")
-	w.WriteHeader(http.StatusTemporaryRedirect)
 }

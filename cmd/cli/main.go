@@ -14,7 +14,7 @@ var cel celeritas.Celeritas
 
 func main() {
 	var message string
-	arg1, arg2, arg3, arg4, err := validateInput()
+	arg1, arg2, arg3, err := validateInput()
 	if err != nil {
 		exitGracefully(err)
 	}
@@ -22,13 +22,6 @@ func main() {
 	setup(arg1, arg2)
 
 	switch arg1 {
-
-	case "up":
-		client(false)
-
-	case "down":
-		client(true)
-
 	case "help":
 		showHelp()
 
@@ -42,8 +35,6 @@ func main() {
 		color.Yellow("Application version: " + version)
 
 	case "migrate":
-		checkForDB()
-
 		if arg2 == "" {
 			arg2 = "up"
 		}
@@ -57,7 +48,7 @@ func main() {
 		if arg2 == "" {
 			exitGracefully(errors.New("make requires a subcommand: (migration|model|handler)"))
 		}
-		err = doMake(arg2, arg3, arg4)
+		err = doMake(arg2, arg3)
 		if err != nil {
 			exitGracefully(err)
 		}
@@ -69,8 +60,8 @@ func main() {
 	exitGracefully(nil, message)
 }
 
-func validateInput() (string, string, string, string, error) {
-	var arg1, arg2, arg3, arg4 string
+func validateInput() (string, string, string, error) {
+	var arg1, arg2, arg3 string
 
 	if len(os.Args) > 1 {
 		arg1 = os.Args[1]
@@ -82,17 +73,13 @@ func validateInput() (string, string, string, string, error) {
 		if len(os.Args) >= 4 {
 			arg3 = os.Args[3]
 		}
-
-		if len(os.Args) >= 5 {
-			arg4 = os.Args[4]
-		}
 	} else {
 		color.Red("Error: command required")
 		showHelp()
-		return "", "", "", "", errors.New("command required")
+		return "", "", "", errors.New("command required")
 	}
 
-	return arg1, arg2, arg3, arg4, nil
+	return arg1, arg2, arg3, nil
 }
 
 func exitGracefully(err error, msg ...string) {
