@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"github.com/gabriel-vasile/mimetype"
 	"github.com/tsawler/celeritas/filesystems"
-	"github.com/tsawler/celeritas/filesystems/miniofilesystem"
-	"github.com/tsawler/celeritas/filesystems/s3filesystem"
-	"github.com/tsawler/celeritas/filesystems/sftpfilesystem"
-	"github.com/tsawler/celeritas/filesystems/webdavfilesystem"
 	"io"
 	"log"
 	"net/http"
@@ -25,37 +21,12 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 		return err
 	}
 
-	var fsInterface interface{} = fs
-
-	log.Printf("type is %T", fsInterface)
-
-	switch fsInterface.(type) {
-	case *miniofilesystem.Minio:
-		fileSystem := c.FileSystems["MINIO"].(miniofilesystem.Minio)
-		err = fileSystem.Put(fileName, folder)
+	if fs != nil {
+		err = fs.Put(fileName, folder)
 		if err != nil {
 			return err
 		}
-	case *sftpfilesystem.SFTP:
-		fileSystem := c.FileSystems["SFTP"].(sftpfilesystem.SFTP)
-		err = fileSystem.Put(fileName, folder)
-		if err != nil {
-			return err
-		}
-	case *webdavfilesystem.WebDAV:
-		fileSystem := c.FileSystems["WEBDAV"].(webdavfilesystem.WebDAV)
-		err = fileSystem.Put(fileName, folder)
-		if err != nil {
-			return err
-		}
-	case *s3filesystem.S3:
-		fileSystem := c.FileSystems["S3"].(s3filesystem.S3)
-		err = fileSystem.Put(fileName, folder)
-		if err != nil {
-			return err
-		}
-	default:
-		// local file system; just move the file to path
+	} else {
 		err = os.Rename(fileName, fmt.Sprintf("./%s/%s", folder, path.Base(fileName)))
 		if err != nil {
 			return err

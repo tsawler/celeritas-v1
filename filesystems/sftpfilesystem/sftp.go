@@ -157,3 +157,13 @@ func (s *SFTP) getCredentials() (*sftp.Client, error) {
 
 	return client, nil
 }
+
+func (s *SFTP) CreateDir(p string) error {
+	client, err := s.getCredentials()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	return client.Mkdir(p)
+}
