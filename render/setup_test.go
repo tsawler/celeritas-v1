@@ -1,8 +1,11 @@
 package render
 
 import (
+	"github.com/alexedwards/scs/v2"
+	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/CloudyKit/jet/v6"
 )
@@ -19,5 +22,13 @@ var testRenderer = Render{
 }
 
 func TestMain(m *testing.M) {
+	session := scs.New()
+	session.Lifetime = 24 * time.Hour
+	session.Cookie.Persist = true
+	session.Cookie.SameSite = http.SameSiteLaxMode
+	session.Cookie.Secure = false
+
+	testRenderer.Session = session
+
 	os.Exit(m.Run())
 }
