@@ -34,6 +34,7 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 		}
 	}
 
+	// delete tmp file after function completes
 	defer func() {
 		_ = os.Remove(fmt.Sprintf("%s/%s", folder, fileName))
 	}()
