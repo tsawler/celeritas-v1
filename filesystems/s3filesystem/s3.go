@@ -86,7 +86,7 @@ func (s *S3) List(prefix string) ([]filesystems.Listing, error) {
 	svc := s3.New(sess)
 	input := &s3.ListObjectsInput{
 		Bucket: aws.String(s.Bucket),
-		Prefix: aws.String(""),
+		Prefix: aws.String(prefix),
 	}
 
 	result, err := svc.ListObjects(input)
@@ -122,7 +122,7 @@ func (s *S3) List(prefix string) ([]filesystems.Listing, error) {
 	return listing, nil
 }
 
-// Delete deletes one more more items from DO/AWS
+// Delete deletes one or more items from DO/AWS
 func (s *S3) Delete(itemsToDelete []string) bool {
 	c := s.getCredentials()
 	sess := session.Must(session.NewSession(&aws.Config{
