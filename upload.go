@@ -34,6 +34,10 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 		}
 	}
 
+	defer func() {
+		_ = os.Remove(fmt.Sprintf("%s/%s", folder, fileName))
+	}()
+
 	return nil
 }
 
