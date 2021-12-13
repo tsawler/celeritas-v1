@@ -13,21 +13,21 @@ import (
 
 // UploadFile uploads fileName (full path) to folder for the specified file system fs; if
 // fs is nil, then we upload to the local file system
-func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS) error {
-	fileName, err := c.getFileUpload(r)
+func (c *Celeritas) UploadFile(r *http.Request, destination, field string, fs filesystems.FS) error {
+	fileName, err := c.getFileUpload(r, field)
 	if err != nil {
 		c.ErrorLog.Println(err)
 		return err
 	}
 
 	if fs != nil {
-		err = fs.Put(fileName, folder)
+		err = fs.Put(fileName, destination)
 		if err != nil {
 			c.ErrorLog.Println(err)
 			return err
 		}
 	} else {
-		err = os.Rename(fileName, fmt.Sprintf("./%s/%s", folder, path.Base(fileName)))
+		err = os.Rename(fileName, fmt.Sprintf("./%s/%s", destination, field, path.Base(fileName)))
 		if err != nil {
 			c.ErrorLog.Println(err)
 			return err
@@ -36,7 +36,7 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 
 	// delete tmp file after function completes
 	defer func() {
-		_ = os.Remove(fmt.Sprintf("%s/%s", folder, fileName))
+		_ = os.Remove(fmt.Sprintf("%s/%s", destination, field, fileName))
 	}()
 
 	return nil
@@ -44,13 +44,13 @@ func (c *Celeritas) UploadFile(r *http.Request, folder string, fs filesystems.FS
 
 // getFileUpload gets an uploaded file from the request and stores it in the tmp folder.
 // File uploads are limited to those specified in .env, by mime type, and by file size.
-func (c *Celeritas) getFileUpload(r *http.Request) (string, error) {
+func (c *Celeritas) getFileUpload(r *http.Request, field string) (string, error) {
 	err := r.ParseMultipartForm(c.config.uploads.maxUploadSize)
 	if err != nil {
 		return "", err
 	}
 
-	file, header, err := r.FormFile("formFile")
+	file, header, err := r.FormFile(field)
 	if err != nil {
 		return "", err
 	}
@@ -68,15 +68,6 @@ func (c *Celeritas) getFileUpload(r *http.Request) (string, error) {
 		fmt.Println(err)
 		return "", err
 	}
-
-	//log.Println("Mime type is", mimeType.String())
-	//
-	//validMimeTypes := []string{
-	//	"image/gif",
-	//	"image/jpeg",
-	//	"image/png",
-	//	"application/pdf",
-	//}
 
 	if !inSlice(c.config.uploads.allowedMimeTypes, mimeType.String()) {
 		return "", errors.New("invalid mimetype")

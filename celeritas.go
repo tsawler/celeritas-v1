@@ -58,6 +58,10 @@ type Celeritas struct {
 	Server          Server
 	MaintenanceMode bool
 	FileSystems     map[string]interface{}
+	S3              s3filesystem.S3
+	SFTP            sftpfilesystem.SFTP
+	WebDAV          webdavfilesystem.WebDAV
+	Minio           miniofilesystem.Minio
 }
 
 type Server struct {
@@ -253,6 +257,7 @@ func (c *Celeritas) createFileSystems() map[string]interface{} {
 			Bucket:   os.Getenv("S3_BUCKET"),
 		}
 		fileSystems["S3"] = s3
+		c.S3 = s3
 	}
 
 	if os.Getenv("MINIO_SECRET") != "" {
@@ -269,6 +274,7 @@ func (c *Celeritas) createFileSystems() map[string]interface{} {
 			Bucket:   os.Getenv("MINIO_BUCKET"),
 		}
 		fileSystems["MINIO"] = minio
+		c.Minio = minio
 	}
 
 	if os.Getenv("SFTP_HOST") != "" {
@@ -279,6 +285,7 @@ func (c *Celeritas) createFileSystems() map[string]interface{} {
 			Port: os.Getenv("SFTP_PORT"),
 		}
 		fileSystems["SFTP"] = sftp
+		c.SFTP = sftp
 	}
 
 	if os.Getenv("WEBDAV_HOST") != "" {
@@ -288,6 +295,7 @@ func (c *Celeritas) createFileSystems() map[string]interface{} {
 			Pass: os.Getenv("WEBDAV_PASS"),
 		}
 		fileSystems["WEBDAV"] = webDav
+		c.WebDAV = webDav
 	}
 	return fileSystems
 }

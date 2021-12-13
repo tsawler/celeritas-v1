@@ -2,14 +2,13 @@ package main
 
 import (
 	"github.com/fatih/color"
-	"github.com/gobuffalo/pop"
 )
 
 func doAuth() error {
 	checkForDB()
 
 	// get a connection for pop
-	tx, err := pop.Connect("development")
+	tx, err := cel.PopConnect()
 	if err != nil {
 		exitGracefully(err)
 	}

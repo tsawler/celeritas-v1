@@ -76,6 +76,10 @@ func (s *S3) Put(fileName, folder string) error {
 
 // List gets a listing of files in the directory prefix from DO/AWS
 func (s *S3) List(prefix string) ([]filesystems.Listing, error) {
+	if prefix == "/" {
+		prefix = ""
+	}
+
 	c := s.getCredentials()
 	sess := session.Must(session.NewSession(&aws.Config{
 		Endpoint:    &s.Endpoint,

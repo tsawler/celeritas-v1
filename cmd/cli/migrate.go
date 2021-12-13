@@ -3,6 +3,8 @@ package main
 import "github.com/gobuffalo/pop"
 
 func doMigrate(arg2, arg3 string) error {
+	checkForDB()
+
 	// get a connection for pop
 	tx, err := pop.Connect("development")
 	if err != nil {
