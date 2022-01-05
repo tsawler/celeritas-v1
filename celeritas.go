@@ -312,35 +312,6 @@ func (c *Celeritas) Init(p initPaths) error {
 	return nil
 }
 
-// ListenAndServe starts the web server
-//func (c *Celeritas) ListenAndServe() {
-//	srv := &http.Server{
-//		Addr:         fmt.Sprintf(":%s", os.Getenv("PORT")),
-//		ErrorLog:     c.ErrorLog,
-//		Handler:      c.Routes,
-//		IdleTimeout:  30 * time.Second,
-//		ReadTimeout:  30 * time.Second,
-//		WriteTimeout: 600 * time.Second,
-//	}
-//
-//	if c.DB.Pool != nil {
-//		defer c.DB.Pool.Close()
-//	}
-//
-//	if redisPool != nil {
-//		defer redisPool.Close()
-//	}
-//
-//	if badgerConn != nil {
-//		defer badgerConn.Close()
-//	}
-//
-//	go c.listenRPC()
-//	c.InfoLog.Printf("Listening on port %s", os.Getenv("PORT"))
-//	err := srv.ListenAndServe()
-//	c.ErrorLog.Fatal(err)
-//}
-
 func (c *Celeritas) checkDotEnv(path string) error {
 	err := c.CreateFileIfNotExists(fmt.Sprintf("%s/.env", path))
 	if err != nil {
