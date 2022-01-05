@@ -14,8 +14,7 @@ func (c *Celeritas) ScreenShot(pageURL, testName string, w, h float64) {
 	page := rod.New().MustConnect().MustIgnoreCertErrors(true).MustPage(pageURL).MustWaitLoad()
 
 	img, _ := page.Screenshot(true, &proto.PageCaptureScreenshot{
-		Format:  proto.PageCaptureScreenshotFormatJpeg,
-		Quality: 90,
+		Format: proto.PageCaptureScreenshotFormatJpeg,
 		Clip: &proto.PageViewport{
 			X:      0,
 			Y:      0,
