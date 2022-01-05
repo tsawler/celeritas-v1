@@ -30,10 +30,17 @@ func (w *WebDAV) Put(fileName, folder string) error {
 	}
 	defer file.Close()
 
-	err = client.WriteStream(fmt.Sprintf("%s/%s", folder, path.Base(fileName)), file, 0644)
+	// this is less efficient, but seems to work now
+	bytes, _ := io.ReadAll(file)
+	err = client.Write(fmt.Sprintf("%s/%s", folder, path.Base(fileName)), bytes, 0644)
 	if err != nil {
 		return err
 	}
+
+	//err = client.WriteStream(fmt.Sprintf("%s/%s", folder, path.Base(fileName)), file, 0644)
+	//if err != nil {
+	//	return err
+	//}
 
 	return nil
 }
