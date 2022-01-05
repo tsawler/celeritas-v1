@@ -5,13 +5,9 @@ import (
 	"github.com/fatih/color"
 	"net/rpc"
 	"os"
-	"sync"
 )
 
-func client(inMaintenanceMode bool) {
-	var wg sync.WaitGroup
-
-	wg.Add(1)
+func rpcClient(inMaintenanceMode bool) {
 	c, err := rpc.Dial("tcp", "127.0.0.1:"+os.Getenv("RPC_PORT"))
 	if err != nil {
 		fmt.Println(err)
@@ -25,5 +21,4 @@ func client(inMaintenanceMode bool) {
 	} else {
 		color.Yellow(result)
 	}
-	wg.Done()
 }

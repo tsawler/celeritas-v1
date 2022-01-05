@@ -36,7 +36,7 @@ func (c *Celeritas) NoSurf(next http.Handler) http.Handler {
 func (c *Celeritas) CheckForMaintenanceMode(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if maintenanceMode {
-			if !strings.Contains(r.URL.Path, "/public/maintenance.html") && !strings.Contains(r.URL.Path, "/public/images/") {
+			if !strings.Contains(r.URL.Path, "/public/maintenance.html") {
 				w.WriteHeader(http.StatusServiceUnavailable)
 				w.Header().Set("Retry-After:", "300")
 				w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, post-check=0, pre-check=0")

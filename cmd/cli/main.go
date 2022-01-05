@@ -24,10 +24,10 @@ func main() {
 	switch arg1 {
 
 	case "up":
-		client(false)
+		rpcClient(false)
 
 	case "down":
-		client(true)
+		rpcClient(true)
 
 	case "help":
 		showHelp()
