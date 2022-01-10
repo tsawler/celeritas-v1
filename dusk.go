@@ -45,3 +45,11 @@ func (c *Celeritas) PageHasText(body io.ReadCloser, search string) (bool, error)
 
 	return strings.Contains(string(resp), search), nil
 }
+
+func (c *Celeritas) FetchPage(pageURL string) *rod.Page {
+	return rod.New().MustConnect().MustIgnoreCertErrors(true).MustPage(pageURL).MustWaitLoad()
+}
+
+func (c *Celeritas) SelectElementByID(page *rod.Page, id string) *rod.Element {
+	return page.MustElementByJS(fmt.Sprintf("document.getElementById('%s')", id))
+}
