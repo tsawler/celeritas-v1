@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func (c *Celeritas) ScreenShot(pageURL, testName string, w, h float64) {
+func (c *Celeritas) TakeScreenShot(pageURL, testName string, w, h float64) {
 	page := rod.New().MustConnect().MustIgnoreCertErrors(true).MustPage(pageURL).MustWaitLoad()
 
 	img, _ := page.Screenshot(true, &proto.PageCaptureScreenshot{
